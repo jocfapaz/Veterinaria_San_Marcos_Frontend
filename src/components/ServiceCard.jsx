@@ -1,5 +1,6 @@
-import { Link } from 'react-router'
-import { formatPrice } from '../mockDB.js'
+﻿import { Link } from 'react-router'
+import { formatPrice } from '../utils/format.js'
+import { normalizeImagePath } from '../utils/imageUrl.js'
 import Button from './Button'
 
 export default function ServiceCard({
@@ -13,14 +14,22 @@ export default function ServiceCard({
   note,
   onAddToRequests,
 }) {
+  const imageSrc = normalizeImagePath(image)
+
   return (
     <article className="group bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200 overflow-hidden flex flex-col transition duration-200">
       <Link to={`/servicios/${id}`} className="overflow-hidden bg-slate-100 aspect-video block">
-        <img
-          src={image}
-          alt={name}
-          className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
-        />
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={name}
+            className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+            Sin imagen
+          </div>
+        )}
       </Link>
 
       <div className="p-5 flex flex-col flex-grow">

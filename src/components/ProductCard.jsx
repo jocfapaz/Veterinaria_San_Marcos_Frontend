@@ -1,5 +1,6 @@
-import { Link } from 'react-router'
-import { formatPrice, calculateDiscountedPrice } from '../mockDB.js'
+﻿import { Link } from 'react-router'
+import { formatPrice, calculateDiscountedPrice } from '../utils/format.js'
+import { normalizeImagePath } from '../utils/imageUrl.js'
 import Button from './Button'
 
 export default function ProductCard({
@@ -13,6 +14,7 @@ export default function ProductCard({
   onAdd,
 }) {
   const finalPrice = calculateDiscountedPrice(price, discount)
+  const imageSrc = normalizeImagePath(image)
 
   return (
     <article className="group bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200 overflow-hidden flex flex-col transition-all duration-200">
@@ -25,11 +27,15 @@ export default function ProductCard({
             -{discount}%
           </span>
         )}
-        <img
-          src={image}
-          alt={name}
-          className="object-contain h-full w-full group-hover:scale-105 transition-transform duration-300"
-        />
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={name}
+            className="object-contain h-full w-full group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="text-slate-400 text-sm">Sin imagen</div>
+        )}
       </Link>
 
       <div className="p-5 flex flex-col flex-grow">
