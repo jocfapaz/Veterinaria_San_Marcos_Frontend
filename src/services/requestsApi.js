@@ -1,4 +1,4 @@
-import { get, post, patch, put } from './api.js'
+import { get, post, patch } from './api.js'
 
 function toArray(data) {
   if (Array.isArray(data)) return data
@@ -25,131 +25,112 @@ function normalizeStatus(status) {
   return s
 }
 
-function mapService(dto = {}) {
-  const s = dto?.servicio ?? dto?.service ?? dto
-  if (!s || typeof s !== 'object') return null
-  return {
-    id: s.id ?? s._id ?? dto.serviceId ?? dto.servicioId ?? null,
-    name: s.name ?? s.nombre ?? dto.serviceName ?? dto.nombreServicio ?? '',
-    price: Number(s.price ?? s.precio ?? s.costo ?? dto.price ?? dto.precio ?? 0) || 0,
-    category: s.category ?? s.categoria ?? '',
-    duration: s.duration ?? s.duracion ?? '',
+function statusToBackend(status) {
+  const map = {
+    pending: 'PENDIENTE',
+    confirmed: 'CONFIRMADA',
+    completed: 'COMPLETADA',
+    cancelled: 'CANCELADA',
   }
+  return map[normalizeStatus(status)] || 'PENDIENTE'
 }
 
 export function mapRequest(dto = {}) {
   const raw = dto?.data ?? dto?.solicitud ?? dto?.request ?? dto
   const d = raw && typeof raw === 'object' ? raw : {}
-  const service = mapService(d) || {
-    id: d.serviceId ?? d.servicioId ?? null,
-    name: d.serviceName ?? d.nombreServicio ?? '',
-    price: Number(d.price ?? d.precio ?? d.costo ?? 0) || 0,
-    category: d.serviceCategory ?? d.categoriaServicio ?? '',
-    duration: d.serviceDuration ?? d.duracionServicio ?? '',
-  }
-  const createdAt = d.createdAt ?? d.fechaCreacion ?? d.fecha ?? d.fechaSolicitud ?? null
-  const requestedDate = d.requestedDate ?? d.fechaSolicitada ?? d.fechaPreferida ?? d.preferredDate ?? d.fechaDeseada ?? null
-  const appointmentDate = d.appointmentDate ?? d.fechaCita ?? d.fechaProgramada ?? d.scheduledDate ?? null
-  const appointmentTime = d.appointmentTime ?? d.horaCita ?? d.horaProgramada ?? d.scheduledTime ?? null
-  const comment = d.comment ?? d.comentario ?? d.comentarios ?? d.notes ?? d.notas ?? d.observaciones ?? ''
+  const createdAt = d.createdAt ?? d.fechaCreacion ?? null
+  const requestedDate = d.fechaSolicitada ?? d.requestedDate ?? null
+  const appointmentDate = d.fechaCita ?? d.appointmentDate ?? null
+  const appointmentTime = d.horaCita ?? d.appointmentTime ?? null
+  const comment = d.comentario ?? d.comment ?? ''
   return {
-    id: d.id ?? d._id ?? d.codigo ?? d.requestNumber ?? null,
-    userId: d.userId ?? d.usuarioId ?? d.clientId ?? d.clienteId ?? null,
-    serviceId: service.id ?? d.serviceId ?? d.servicioId ?? null,
-    service,
-    petName: d.petName ?? d.nombreMascota ?? d.mascota ?? '',
-    species: d.species ?? d.especie ?? '',
+    id: d.id ?? d._id ?? null,
+    userId: d.usuarioId ?? d.userId ?? null,
+    userName: d.usuarioNombre ?? d.userName ?? '',
+    serviceId: d.servicioId ?? d.serviceId ?? null,
+    serviceName: d.servicioNombre ?? d.serviceName ?? '',
+    petId: d.mascotaId ?? d.petId ?? null,
+    petName: d.mascotaNombre ?? d.petName ?? '',
+    species: d.especie ?? d.species ?? '',
     requestedDate,
     appointmentDate,
     appointmentTime,
     createdAt,
     comment,
-    status: normalizeStatus(d.status ?? d.estado),
+    status: normalizeStatus(d.estado ?? d.status),
   }
 }
 
 export async function listMyRequests() {
-  try {
-    const data = await get('/solicitudes/mis-solicitudes')
-    return toArray(data).map(mapRequest)
-  } catch {
-    const data = await get('/solicitudes')
-    return toArray(data).map(mapRequest)
-  }
+  const data = await get('/service-requests/me')
+  return toArray(data).map(mapRequest)
 }
 
 export async function createRequest(payload = {}) {
   const body = {
     servicioId: payload.serviceId,
-    serviceId: payload.serviceId,
-    usuarioId: payload.userId,
-    userId: payload.userId,
-    nombreMascota: payload.petName,
-    petName: payload.petName,
-    mascota: payload.petName,
+    mascotaNombre: payload.petName,
     especie: payload.species,
-    species: payload.species,
     fechaSolicitada: payload.requestedDate,
-    requestedDate: payload.requestedDate,
-    fechaPreferida: payload.requestedDate,
-    preferredDate: payload.requestedDate,
+    comentario: payload.comment || '',
   }
-  const data = await post('/solicitudes', body)
-  const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-  return mapRequest(raw && typeof raw === 'object' ? raw : {})
+  const data = await post('/service-requests', body)
+  return mapRequest(data)
 }
 
 export async function listRequests() {
-  const data = await get('/solicitudes')
+  const data = await get('/service-requests')
   return toArray(data).map(mapRequest)
 }
 
 export async function getRequestById(id) {
-  const data = await get(`/solicitudes/${id}`)
-  const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-  if (!raw || (typeof raw === 'object' && !raw.id && !raw._id && !raw.codigo && !raw.requestNumber)) {
-    return null
-  }
-  return mapRequest(raw)
+  const data = await get(`/service-requests/${id}`)
+  return mapRequest(data)
+}
+
+export async function updateRequestStatus(id, status) {
+  const data = await patch(`/service-requests/${id}/status`, { estado: statusToBackend(status) })
+  return mapRequest(data)
+}
+
+export async function updateRequestAppointment(id, appointmentDate, appointmentTime) {
+  const data = await patch(`/service-requests/${id}/date-time`, {
+    fechaCita: appointmentDate,
+    horaCita: appointmentTime,
+  })
+  return mapRequest(data)
+}
+
+export async function updateRequestComment(id, comment) {
+  const data = await patch(`/service-requests/${id}/comment`, { comentario: comment })
+  return mapRequest(data)
 }
 
 export async function updateRequest(id, payload = {}) {
-  const body = {
-    status: payload.status,
-    estado: payload.status ?? payload.estado,
-    appointmentDate: payload.appointmentDate,
-    fechaCita: payload.appointmentDate,
-    fechaProgramada: payload.appointmentDate,
-    appointmentTime: payload.appointmentTime,
-    horaCita: payload.appointmentTime,
-    horaProgramada: payload.appointmentTime,
+  let result = {}
+
+  if (payload.status != null) {
+    result = await updateRequestStatus(id, payload.status)
   }
-  try {
-    const data = await patch(`/solicitudes/${id}`, body)
-    const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-    return raw && typeof raw === 'object' ? mapRequest(raw) : { id, ...payload }
-  } catch {
-    const data = await put(`/solicitudes/${id}`, body)
-    const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-    return raw && typeof raw === 'object' ? mapRequest(raw) : { id, ...payload }
+
+  if (payload.appointmentDate != null || payload.appointmentTime != null) {
+    const updated = await updateRequestAppointment(
+      id,
+      payload.appointmentDate,
+      payload.appointmentTime,
+    )
+    result = { ...result, ...updated }
   }
+
+  if (payload.comment != null) {
+    const updated = await updateRequestComment(id, payload.comment)
+    result = { ...result, ...updated }
+  }
+
+  return result
 }
 
 export async function cancelRequest(id) {
-  const payload = { status: 'cancelled', estado: 'cancelled' }
-  try {
-    const data = await patch(`/solicitudes/${id}/cancelar`, payload)
-    const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-    return raw && typeof raw === 'object' ? mapRequest(raw) : { id, status: 'cancelled' }
-  } catch {
-    try {
-      const data = await patch(`/solicitudes/${id}`, payload)
-      const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-      return raw && typeof raw === 'object' ? mapRequest(raw) : { id, status: 'cancelled' }
-    } catch {
-      const data = await put(`/solicitudes/${id}`, payload)
-      const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
-      return raw && typeof raw === 'object' ? mapRequest(raw) : { id, status: 'cancelled' }
-    }
-  }
+  const data = await patch(`/service-requests/${id}/cancel`)
+  return mapRequest(data)
 }

@@ -1,4 +1,4 @@
-﻿import { get, post, patch, put } from './api.js'
+﻿import { get, post, patch } from './api.js'
 
 function toArray(data) {
   if (Array.isArray(data)) return data
@@ -62,22 +62,17 @@ export function mapOrder(dto = {}, extra = {}) {
 }
 
 export async function listMyOrders() {
-  try {
-    const data = await get('/ordenes/mis-ordenes')
-    return toOrderArray(data).map((o) => mapOrder(o))
-  } catch {
-    const data = await get('/ordenes')
-    return toOrderArray(data).map((o) => mapOrder(o))
-  }
+  const data = await get('/orders/me')
+  return toOrderArray(data).map((o) => mapOrder(o))
 }
 
 export async function listOrders() {
-  const data = await get('/ordenes')
+  const data = await get('/orders')
   return toOrderArray(data).map((o) => mapOrder(o))
 }
 
 export async function getOrderById(id) {
-  const data = await get(`/ordenes/${id}`)
+  const data = await get(`/orders/${id}`)
   const raw = data?.data ?? data?.orden ?? data?.order ?? data
   if (!raw || (typeof raw === 'object' && !raw.id && !raw._id && !raw.numeroOrden && !raw.orderNumber && !Array.isArray(raw.items) && !Array.isArray(raw.detalles))) {
     return null
@@ -86,46 +81,28 @@ export async function getOrderById(id) {
 }
 
 export async function updateOrderStatus(id, status) {
-  const payload = { status, estado: status }
-  try {
-    const data = await patch(`/ordenes/${id}/estado`, payload)
-    const raw = data?.data ?? data?.orden ?? data?.order ?? data
-    return raw ? mapOrder(raw) : { id, status }
-  } catch {
-    const data = await put(`/ordenes/${id}`, payload)
-    const raw = data?.data ?? data?.orden ?? data?.order ?? data
-    return raw ? mapOrder(raw) : { id, status }
-  }
+  const data = await patch(`/orders/${id}/status`, { estado: status })
+  const raw = data?.data ?? data?.orden ?? data?.order ?? data
+  return raw ? mapOrder(raw) : { id, status }
 }
 
 export async function createOrder(orderData) {
   const items = (orderData.items || []).map((it) => ({
     productoId: it.productId,
-    productId: it.productId,
     cantidad: it.quantity,
-    quantity: it.quantity,
   }))
+  const customer = orderData.customer || {}
   const payload = {
-    items,
-    usuarioId: orderData.userId,
-    userId: orderData.userId,
     direccionEnvio: orderData.shippingAddress,
-    shippingAddress: orderData.shippingAddress,
-    instrucciones: orderData.instructions || '',
-    instructions: orderData.instructions || '',
     tipoEntrega: orderData.deliveryType,
-    deliveryType: orderData.deliveryType,
-    cliente: orderData.customer
-      ? {
-          nombre: orderData.customer.firstName,
-          apellido: orderData.customer.lastName,
-          email: orderData.customer.email,
-          telefono: orderData.customer.phone,
-        }
-      : undefined,
-    customer: orderData.customer,
+    instrucciones: orderData.instructions || '',
+    contactoNombre: customer.firstName || '',
+    contactoApellido: customer.lastName || '',
+    contactoEmail: customer.email || '',
+    contactoTelefono: customer.phone || '',
+    items,
   }
-  const data = await post('/ordenes', payload)
+  const data = await post('/orders', payload)
   return mapOrder(data, {
     items: orderData.displayItems,
     shippingAddress: orderData.shippingAddress,
