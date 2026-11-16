@@ -1,34 +1,98 @@
-import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
-  getProductsByCategory,
-  PRODUCT_CATEGORIES,
-} from '../mockDB.js'
+  listProductsByCategory,
+  listProductCategories,
+} from '../services/productsApi.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useCart } from '../contexts/CartContext.jsx'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
 import ProductCard from '../components/ProductCard'
+import LoadingScreen from '../components/LoadingScreen'
 
 const CATEGORY_ICONS = {
-  Antibióticos: '💊',
-  Antiparasitarios: '🦟',
-  Antiinflamatorios: '🌡️',
-  Dermatología: '🧴',
-  Digestivo: '🐾',
-  Cardíaco: '❤️',
-  Analgésicos: '💉',
-  Vacunas: '🛡️',
-  Suplementos: '✨',
+  'Antibióticos': '💊',
+  'Antiparasitarios': '🛡️',
+  'Antiinflamatorios': '🩹',
+  'Dermatología': '🧴',
+  'Digestivo': '🫃',
+  'Cardíaco': '❤️',
+  'Analgésicos': '💉',
+  'Vacunas': '💉',
+  'Suplementos': '⭐',
 }
 
 export default function CategoriasPage() {
   const [selectedCategory, setSelectedCategory] = useState('Todas')
+  const [categories, setCategories] = useState([])
+  const [products, setProducts] = useState([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const { addToCart } = useCart()
 
-  const products = getProductsByCategory(selectedCategory)
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const cats = await listProductCategories()
+        if (active) setCategories(cats)
+      } catch {
+        if (active) setCategories([])
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  async function load(category) {
+    setLoading(true)
+    setError(null)
+    try {
+      const [data, all] = await Promise.all([
+        listProductsByCategory(category),
+        listProductsByCategory('Todas'),
+      ])
+      setProducts(data)
+      setTotalCount(all.length)
+    } catch (err) {
+      setError(err.message || 'Error al cargar los productos.')
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const [data, all] = await Promise.all([
+          listProductsByCategory(selectedCategory),
+          listProductsByCategory('Todas'),
+        ])
+        if (!active) return
+        setProducts(data)
+        setTotalCount(all.length)
+      } catch (err) {
+        if (active) {
+          setError(err.message || 'Error al cargar los productos.')
+          setProducts([])
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [selectedCategory])
 
   function handleAddToCart(productId) {
     if (!currentUser) {
@@ -73,7 +137,7 @@ export default function CategoriasPage() {
                   : 'bg-white border-slate-200 text-slate-700 hover:border-emerald-400 hover:text-emerald-700'
               }`}
             >
-              <span className="block text-2xl mb-1">🛒</span>
+              <span className="block text-2xl mb-1">🗂️</span>
               <span className="block text-sm font-bold">Todas</span>
               <span
                 className={`block text-xs mt-1 ${
@@ -82,13 +146,12 @@ export default function CategoriasPage() {
                     : 'text-slate-500'
                 }`}
               >
-                {getProductsByCategory('Todas').length} productos
+                {totalCount} productos
               </span>
             </button>
           </li>
 
-          {PRODUCT_CATEGORIES.map((category) => {
-            const count = getProductsByCategory(category).length
+          {categories.map((category) => {
             const isActive = selectedCategory === category
             return (
               <li key={category}>
@@ -105,13 +168,6 @@ export default function CategoriasPage() {
                     {CATEGORY_ICONS[category] || '📦'}
                   </span>
                   <span className="block text-sm font-bold">{category}</span>
-                  <span
-                    className={`block text-xs mt-1 ${
-                      isActive ? 'text-emerald-100' : 'text-slate-500'
-                    }`}
-                  >
-                    {count} {count === 1 ? 'producto' : 'productos'}
-                  </span>
                 </button>
               </li>
             )
@@ -131,14 +187,31 @@ export default function CategoriasPage() {
           </span>
         </div>
 
-        {products.length === 0 ? (
+        {loading && <LoadingScreen message="Cargando productos..." />}
+
+        {!loading && error && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center space-y-3">
+            <p className="text-rose-700 font-medium">{error}</p>
+            <button
+              type="button"
+              onClick={() => load(selectedCategory)}
+              className="inline-flex items-center justify-center py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && products.length === 0 && (
           <EmptyState
             title="Sin productos en esta categoría"
             message="Prueba con otra categoría o revisa el catálogo completo de la tienda."
             actionLabel="Ir a la tienda"
             actionTo="/tienda"
           />
-        ) : (
+        )}
+
+        {!loading && !error && products.length > 0 && (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <ProductCard
