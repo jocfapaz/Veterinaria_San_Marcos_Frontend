@@ -114,14 +114,20 @@ export default function PagoExitoPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Link
-              to="/tienda"
+              to="/mis-ordenes"
               className="flex-1 text-center py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              Ver mis órdenes
+            </Link>
+            <Link
+              to="/tienda"
+              className="flex-1 text-center py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-sm rounded-lg transition-colors"
             >
               Seguir comprando
             </Link>
             <Link
               to="/"
-              className="flex-1 text-center py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-sm rounded-lg transition-colors"
+              className="flex-1 text-center py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-lg transition-colors"
             >
               Volver al inicio
             </Link>

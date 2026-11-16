@@ -63,8 +63,12 @@ export default function MobileMenu({ onClose }) {
           </NavLink>
         )}
 
+        <NavLink to="/mis-ordenes" className={linkBase} onClick={onClose}>
+          Mis órdenes
+        </NavLink>
+
         <NavLink to="/mi-solicitud" className={linkBase} onClick={onClose}>
-          📋 Mi solicitud ({requestCount})
+          Mi solicitud ({requestCount})
         </NavLink>
 
         <NavLink to="/carrito" className={linkBase} onClick={onClose}>

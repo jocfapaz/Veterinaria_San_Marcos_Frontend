@@ -1,10 +1,24 @@
-﻿import { post } from './api.js'
+﻿import { get, post } from './api.js'
 
 function toArray(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.items)) return data.items
   if (Array.isArray(data?.detalles)) return data.detalles
   if (Array.isArray(data?.lineas)) return data.lineas
+  return []
+}
+
+function toOrderArray(data) {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.content)) return data.content
+  if (Array.isArray(data?.data)) return data.data
+  if (Array.isArray(data?.items)) return data.items
+  if (Array.isArray(data?.ordenes)) return data.ordenes
+  if (Array.isArray(data?.orders)) return data.orders
+  if (data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    if (Array.isArray(data.data.content)) return data.data.content
+    if (Array.isArray(data.data.ordenes)) return data.data.ordenes
+  }
   return []
 }
 
@@ -32,6 +46,7 @@ export function mapOrder(dto = {}, extra = {}) {
   const fallbackItems = Array.isArray(extra.items) ? extra.items : []
   const items = toArray(d).length ? toArray(d).map((it, i) => mapOrderItem(it, fallbackItems[i] || {})) : fallbackItems
   const totalRaw = d.total ?? d.montoTotal ?? d.totalAmount ?? extra.total
+  const createdAt = d.createdAt ?? d.fechaCreacion ?? d.fecha ?? d.fechaPedido ?? extra.createdAt ?? new Date().toISOString()
   return {
     id: d.id ?? d._id ?? extra.id ?? null,
     orderNumber: d.orderNumber ?? d.numeroOrden ?? d.numero ?? d.codigo ?? d.id ?? extra.orderNumber ?? null,
@@ -39,11 +54,30 @@ export function mapOrder(dto = {}, extra = {}) {
     total: totalRaw != null ? Number(totalRaw) || 0 : items.reduce((s, it) => s + (Number(it.subtotal) || 0), 0),
     items,
     shippingAddress: d.shippingAddress ?? d.direccionEnvio ?? d.direccion ?? extra.shippingAddress ?? '',
-    instructions: d.instructions ?? d.instrucciones ?? extra.instructions ?? '',
+    instructions: d.instructions ?? d.instrucciones ?? d.indicaciones ?? extra.instructions ?? '',
     customer: d.customer ?? d.cliente ?? extra.customer ?? null,
     deliveryType: d.deliveryType ?? d.tipoEntrega ?? extra.deliveryType ?? null,
-    createdAt: d.createdAt ?? d.fechaCreacion ?? d.fecha ?? extra.createdAt ?? new Date().toISOString(),
+    createdAt,
   }
+}
+
+export async function listMyOrders() {
+  try {
+    const data = await get('/ordenes/mis-ordenes')
+    return toOrderArray(data).map((o) => mapOrder(o))
+  } catch {
+    const data = await get('/ordenes')
+    return toOrderArray(data).map((o) => mapOrder(o))
+  }
+}
+
+export async function getOrderById(id) {
+  const data = await get(`/ordenes/${id}`)
+  const raw = data?.data ?? data?.orden ?? data?.order ?? data
+  if (!raw || (typeof raw === 'object' && !raw.id && !raw._id && !raw.numeroOrden && !raw.orderNumber && !Array.isArray(raw.items) && !Array.isArray(raw.detalles))) {
+    return null
+  }
+  return mapOrder(raw)
 }
 
 export async function createOrder(orderData) {

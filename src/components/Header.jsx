@@ -91,10 +91,17 @@ export default function Header() {
           )}
 
           <Link
+            to="/mis-ordenes"
+            className="text-slate-600 hover:text-emerald-700 px-2 py-1 transition-colors"
+          >
+            Mis órdenes
+          </Link>
+
+          <Link
             to="/mi-solicitud"
             className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
           >
-            📋 Mi solicitud ({requestCount})
+            Mi solicitud ({requestCount})
           </Link>
 
           <Link

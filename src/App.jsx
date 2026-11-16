@@ -18,6 +18,8 @@ import CheckoutPage from './pages/CheckoutPage'
 import PagoExitoPage from './pages/PagoExitoPage'
 import PagoErrorPage from './pages/PagoErrorPage'
 import MiSolicitudPage from './pages/MiSolicitudPage'
+import MisOrdenesPage from './pages/MisOrdenesPage'
+import OrdenDetallePage from './pages/OrdenDetallePage'
 import ProtectedRoute from './contexts/ProtectedRoute'
 import AdminRoute from './contexts/AdminRoute'
 import AdminLayout from './components/admin/AdminLayout'
@@ -75,6 +77,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MiSolicitudPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mis-ordenes"
+          element={
+            <ProtectedRoute>
+              <MisOrdenesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mis-ordenes/:id"
+          element={
+            <ProtectedRoute>
+              <OrdenDetallePage />
             </ProtectedRoute>
           }
         />
