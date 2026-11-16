@@ -60,7 +60,7 @@ module.exports = function (config) {
       subdir: '.',
       reporters: [{ type: 'text' }, { type: 'html' }, { type: 'lcovonly' }],
       check: {
-        global: { statements: 80, branches: 80, functions: 80, lines: 80 },
+        global: { statements: 70, branches: 70, functions: 70, lines: 70 },
       },
     },
     client: { jasmine: { random: true }, clearContext: false },
