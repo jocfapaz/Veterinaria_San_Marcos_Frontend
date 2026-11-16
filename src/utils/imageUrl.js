@@ -4,7 +4,9 @@
     return path
   }
   let clean = path
-  if (clean.startsWith('assets/')) {
+  if (clean.startsWith('/assets/')) {
+    clean = clean.slice('/assets/'.length)
+  } else if (clean.startsWith('assets/')) {
     clean = clean.slice('assets/'.length)
   }
   return clean.startsWith('/') ? clean : `/${clean}`
