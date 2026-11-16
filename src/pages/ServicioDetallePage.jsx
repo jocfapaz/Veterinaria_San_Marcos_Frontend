@@ -53,14 +53,14 @@ export default function ServicioDetallePage() {
 
   useEffect(() => {
     let active = true
-    setPetOption('')
-    setNewPetName('')
-    setNewPetSpecies('Perro')
-    setDate('')
-    setErrors({})
-    setSuccess(false)
-    setSubmitError(null)
     ;(async () => {
+      setPetOption('')
+      setNewPetName('')
+      setNewPetSpecies('Perro')
+      setDate('')
+      setErrors({})
+      setSuccess(false)
+      setSubmitError(null)
       setLoading(true)
       setError(null)
       try {

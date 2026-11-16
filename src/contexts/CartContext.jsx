@@ -26,16 +26,16 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     let active = true
-    const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))]
-    if (ids.length === 0) {
-      setDetails({})
-      setDetailsLoading(false)
-      setDetailsError(null)
-      return () => {
-        active = false
-      }
-    }
     ;(async () => {
+      const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))]
+      if (ids.length === 0) {
+        if (active) {
+          setDetails({})
+          setDetailsLoading(false)
+          setDetailsError(null)
+        }
+        return
+      }
       setDetailsLoading(true)
       setDetailsError(null)
       try {

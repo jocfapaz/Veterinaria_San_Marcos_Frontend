@@ -1,4 +1,5 @@
-﻿import { Link } from 'react-router'
+﻿import { useState } from 'react'
+import { Link } from 'react-router'
 import { formatPrice } from '../utils/format.js'
 import { readLastOrder } from '../utils/lastOrder.js'
 import PageHeader from '../components/PageHeader'
@@ -6,6 +7,9 @@ import EmptyState from '../components/EmptyState'
 
 export default function PagoErrorPage() {
   const attempt = readLastOrder()
+  const [attemptDate] = useState(() =>
+    new Date(attempt?.createdAt || Date.now()).toLocaleString('es-CL'),
+  )
 
   if (!attempt || attempt.status !== 'failed') {
     return (
@@ -59,7 +63,7 @@ export default function PagoErrorPage() {
             <div>
               <dt className="text-slate-500 font-medium">Fecha del intento</dt>
               <dd className="text-slate-900 font-semibold mt-0.5">
-                {new Date(attempt.createdAt || Date.now()).toLocaleString('es-CL')}
+                {attemptDate}
               </dd>
             </div>
             <div>

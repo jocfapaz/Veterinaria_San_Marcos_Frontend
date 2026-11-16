@@ -34,29 +34,30 @@ export function RequestProvider({ children }) {
 
   useEffect(() => {
     if (!authReady) return
-    if (!currentUser) {
-      setRequests([])
-      setError(null)
-      setLoading(false)
-      return
-    }
     let active = true
-    setLoading(true)
-    setError(null)
-    requestsApi
-      .listMyRequests()
-      .then((data) => {
+    ;(async () => {
+      if (!currentUser) {
+        if (active) {
+          setRequests([])
+          setError(null)
+          setLoading(false)
+        }
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await requestsApi.listMyRequests()
         if (!active) return
         setRequests(Array.isArray(data) ? data : [])
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!active) return
         setError(err.message || 'Error al cargar las solicitudes.')
         setRequests([])
-      })
-      .finally(() => {
+      } finally {
         if (active) setLoading(false)
-      })
+      }
+    })()
     return () => {
       active = false
     }

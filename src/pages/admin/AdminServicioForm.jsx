@@ -26,7 +26,7 @@ const INITIAL_FORM = {
   code: '',
   name: '',
   description: '',
-  category: '',
+  category: SERVICE_CATEGORIES[0] || '',
   species: 'Perro',
   duration: '',
   price: '',
@@ -64,13 +64,7 @@ export default function AdminServicioForm() {
   }, [])
 
   useEffect(() => {
-    if (!isEdit) {
-      setFormData((prev) => ({
-        ...prev,
-        category: prev.category || SERVICE_CATEGORIES[0] || '',
-      }))
-      return
-    }
+    if (!isEdit) return
     let active = true
     ;(async () => {
       setLoading(true)
@@ -103,12 +97,6 @@ export default function AdminServicioForm() {
       active = false
     }
   }, [id, isEdit])
-
-  useEffect(() => {
-    if (!formData.category && categories.length) {
-      setFormData((prev) => ({ ...prev, category: categories[0] }))
-    }
-  }, [categories, formData.category])
 
   function handleChange(e) {
     const { name, value } = e.target

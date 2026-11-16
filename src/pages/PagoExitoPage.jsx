@@ -1,4 +1,5 @@
-﻿import { Link } from 'react-router'
+﻿import { useState } from 'react'
+import { Link } from 'react-router'
 import { formatPrice } from '../utils/format.js'
 import { readLastOrder } from '../utils/lastOrder.js'
 import PageHeader from '../components/PageHeader'
@@ -6,6 +7,9 @@ import EmptyState from '../components/EmptyState'
 
 export default function PagoExitoPage() {
   const order = readLastOrder()
+  const [orderDate] = useState(() =>
+    new Date(order?.createdAt || Date.now()).toLocaleString('es-CL'),
+  )
 
   if (!order || order.status !== 'paid') {
     return (
@@ -27,7 +31,7 @@ export default function PagoExitoPage() {
   const customer = order.customer || {}
   const rows = [
     { label: 'Número de orden', value: order.orderNumber || order.id },
-    { label: 'Fecha', value: new Date(order.createdAt || Date.now()).toLocaleString('es-CL') },
+    { label: 'Fecha', value: orderDate },
     { label: 'Cliente', value: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || '-' },
     { label: 'Correo', value: customer.email || '-' },
     { label: 'Teléfono', value: customer.phone || '-' },

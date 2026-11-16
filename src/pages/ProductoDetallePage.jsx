@@ -46,9 +46,9 @@ export default function ProductoDetallePage() {
 
   useEffect(() => {
     let active = true
-    setQuantity(1)
-    setSuccess(false)
     ;(async () => {
+      setQuantity(1)
+      setSuccess(false)
       setLoading(true)
       setError(null)
       try {
