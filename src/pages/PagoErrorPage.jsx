@@ -1,5 +1,5 @@
-import { Link } from 'react-router'
-import { formatPrice } from '../mockDB.js'
+﻿import { Link } from 'react-router'
+import { formatPrice } from '../utils/format.js'
 import { readLastOrder } from '../utils/lastOrder.js'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
@@ -24,6 +24,9 @@ export default function PagoErrorPage() {
     )
   }
 
+  const customer = attempt.customer || {}
+  const items = Array.isArray(attempt.items) ? attempt.items : []
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       <PageHeader
@@ -33,7 +36,7 @@ export default function PagoErrorPage() {
 
       <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-rose-600 px-6 py-8 text-center text-white">
-          <div className="text-5xl mb-3">⛔</div>
+          <div className="text-5xl mb-3">✕</div>
           <h2 className="text-2xl font-extrabold">Pago no realizado</h2>
           <p className="text-rose-100 text-sm mt-1">
             {attempt.reason ||
@@ -43,21 +46,20 @@ export default function PagoErrorPage() {
 
         <div className="p-6 space-y-6">
           <div className="bg-rose-50 border border-rose-200 rounded-lg p-4 text-sm text-rose-800">
-            No se realizó ningún cargo. El carrito mantiene tus productos para
-            que puedas intentarlo nuevamente.
+            No se realizó ningún cargo. El carrito mantiene tus productos para que puedas intentarlo nuevamente.
           </div>
 
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
             <div>
               <dt className="text-slate-500 font-medium">Cliente</dt>
               <dd className="text-slate-900 font-semibold mt-0.5">
-                {attempt.customer.firstName} {attempt.customer.lastName}
+                {`${customer.firstName || ''} ${customer.lastName || ''}`.trim() || '-'}
               </dd>
             </div>
             <div>
               <dt className="text-slate-500 font-medium">Fecha del intento</dt>
               <dd className="text-slate-900 font-semibold mt-0.5">
-                {new Date(attempt.createdAt).toLocaleString('es-CL')}
+                {new Date(attempt.createdAt || Date.now()).toLocaleString('es-CL')}
               </dd>
             </div>
             <div>
@@ -69,7 +71,7 @@ export default function PagoErrorPage() {
               <dd className="text-slate-900 font-semibold mt-0.5">
                 {attempt.deliveryType === 'retiro'
                   ? 'Retiro en tienda'
-                  : attempt.shippingAddress}
+                  : attempt.shippingAddress || '-'}
               </dd>
             </div>
             <div>
@@ -85,9 +87,9 @@ export default function PagoErrorPage() {
               Productos afectados
             </h3>
             <ul className="divide-y divide-slate-100 text-sm">
-              {attempt.items.map((item) => (
+              {items.map((item, idx) => (
                 <li
-                  key={item.productId}
+                  key={item.productId || idx}
                   className="py-3 flex justify-between gap-4"
                 >
                   <span className="text-slate-700">
@@ -95,7 +97,7 @@ export default function PagoErrorPage() {
                     <span className="text-slate-400">x{item.quantity}</span>
                   </span>
                   <span className="font-semibold text-slate-900 whitespace-nowrap">
-                    {formatPrice(item.subtotal ?? item.price * item.quantity)}
+                    {formatPrice(item.subtotal ?? Number(item.price || 0) * (item.quantity || 0))}
                   </span>
                 </li>
               ))}

@@ -1,5 +1,5 @@
-import { Link } from 'react-router'
-import { formatPrice } from '../mockDB.js'
+﻿import { Link } from 'react-router'
+import { formatPrice } from '../utils/format.js'
 import { readLastOrder } from '../utils/lastOrder.js'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
@@ -24,20 +24,23 @@ export default function PagoExitoPage() {
     )
   }
 
+  const customer = order.customer || {}
   const rows = [
-    { label: 'Número de orden', value: order.orderNumber },
-    { label: 'Fecha', value: new Date(order.createdAt).toLocaleString('es-CL') },
-    { label: 'Cliente', value: `${order.customer.firstName} ${order.customer.lastName}` },
-    { label: 'Correo', value: order.customer.email },
-    { label: 'Teléfono', value: order.customer.phone },
+    { label: 'Número de orden', value: order.orderNumber || order.id },
+    { label: 'Fecha', value: new Date(order.createdAt || Date.now()).toLocaleString('es-CL') },
+    { label: 'Cliente', value: `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || '-' },
+    { label: 'Correo', value: customer.email || '-' },
+    { label: 'Teléfono', value: customer.phone || '-' },
     {
       label: order.deliveryType === 'retiro' ? 'Tipo de entrega' : 'Dirección de envío',
       value:
         order.deliveryType === 'retiro'
           ? 'Retiro en tienda'
-          : order.shippingAddress,
+          : order.shippingAddress || '-',
     },
   ]
+
+  const items = Array.isArray(order.items) ? order.items : []
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -48,13 +51,13 @@ export default function PagoExitoPage() {
 
       <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="bg-emerald-600 px-6 py-8 text-center text-white">
-          <div className="text-5xl mb-3">✅</div>
+          <div className="text-5xl mb-3">✓</div>
           <h2 className="text-2xl font-extrabold">¡Gracias por tu compra!</h2>
           <p className="text-emerald-100 text-sm mt-1">
-            Recibirás la confirmación en {order.customer.email}
+            {customer.email ? `Recibirás la confirmación en ${customer.email}` : 'Tu pedido ha sido confirmado.'}
           </p>
           <p className="mt-4 inline-block bg-white/15 border border-white/30 rounded-full px-4 py-1.5 text-sm font-semibold tracking-wide">
-            Orden {order.orderNumber}
+            Orden {order.orderNumber || order.id || '-'}
           </p>
         </div>
 
@@ -75,9 +78,9 @@ export default function PagoExitoPage() {
               Productos adquiridos
             </h3>
             <ul className="divide-y divide-slate-100 text-sm">
-              {order.items.map((item) => (
+              {items.map((item, idx) => (
                 <li
-                  key={item.productId}
+                  key={item.productId || idx}
                   className="py-3 flex justify-between gap-4"
                 >
                   <span className="text-slate-700">
@@ -85,7 +88,7 @@ export default function PagoExitoPage() {
                     <span className="text-slate-400">x{item.quantity}</span>
                   </span>
                   <span className="font-semibold text-slate-900 whitespace-nowrap">
-                    {formatPrice(item.subtotal ?? item.price * item.quantity)}
+                    {formatPrice(item.subtotal ?? Number(item.price || 0) * (item.quantity || 0))}
                   </span>
                 </li>
               ))}
@@ -106,6 +109,7 @@ export default function PagoExitoPage() {
                 {formatPrice(order.total)}
               </span>
             </div>
+            <p className="text-xs text-slate-400 text-right">Total calculado por el sistema.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
