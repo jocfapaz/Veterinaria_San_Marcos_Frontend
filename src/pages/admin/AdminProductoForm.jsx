@@ -1,48 +1,120 @@
-import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
   getProductById,
-  addProduct,
+  createProduct,
   updateProduct,
-  PRODUCT_CATEGORIES,
-} from '../../mockDB.js'
+  listProductCategories,
+} from '../../services/productsApi.js'
+import { PRODUCT_CATEGORIES } from '../../mockDB.js'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import FormInput from '../../components/admin/FormInput'
 import FormSelect from '../../components/admin/FormSelect'
 import FormTextarea from '../../components/admin/FormTextarea'
+import LoadingScreen from '../../components/LoadingScreen'
+
+const INITIAL_FORM = {
+  code: '',
+  name: '',
+  description: '',
+  category: '',
+  presentation: '',
+  price: '',
+  stock: 0,
+  stockCritical: 0,
+  image: '',
+  discount: 0,
+}
 
 export default function AdminProductoForm() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isEdit = Boolean(id)
-  const product = isEdit ? getProductById(id) : null
 
-  const [formData, setFormData] = useState({
-    code: product?.code || '',
-    name: product?.name || '',
-    description: product?.description || '',
-    category: product?.category || PRODUCT_CATEGORIES[0],
-    presentation: product?.presentation || '',
-    price: product?.price || '',
-    stock: product?.stock ?? 0,
-    stockCritical: product?.stockCritical ?? 0,
-    image: product?.image || '',
-    discount: product?.discount ?? 0,
-  })
+  const [formData, setFormData] = useState(INITIAL_FORM)
+  const [categories, setCategories] = useState(PRODUCT_CATEGORIES)
+  const [loading, setLoading] = useState(isEdit)
+  const [loadError, setLoadError] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const [errors, setErrors] = useState({})
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      try {
+        const cats = await listProductCategories()
+        if (active && cats.length) setCategories(cats)
+      } catch {
+        /* fallback a constantes */
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isEdit) {
+      setFormData((prev) => ({
+        ...prev,
+        category: prev.category || PRODUCT_CATEGORIES[0] || '',
+      }))
+      return
+    }
+    let active = true
+    ;(async () => {
+      setLoading(true)
+      setLoadError(null)
+      try {
+        const product = await getProductById(id)
+        if (!active) return
+        if (!product) {
+          setLoadError('Producto no encontrado.')
+          return
+        }
+        setFormData({
+          code: product.code || '',
+          name: product.name || '',
+          description: product.description || '',
+          category: product.category || PRODUCT_CATEGORIES[0] || '',
+          presentation: product.presentation || '',
+          price: product.price ?? '',
+          stock: product.stock ?? 0,
+          stockCritical: product.stockCritical ?? 0,
+          image: product.image || '',
+          discount: product.discount ?? 0,
+        })
+      } catch (err) {
+        if (active) setLoadError(err.message || 'Error al cargar el producto.')
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [id, isEdit])
+
+  useEffect(() => {
+    if (!formData.category && categories.length) {
+      setFormData((prev) => ({ ...prev, category: categories[0] }))
+    }
+  }, [categories, formData.category])
 
   function handleChange(e) {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setErrors((prev) => ({ ...prev, [name]: '' }))
+    setSubmitError(null)
   }
 
   function validate() {
     const newErrors = {}
-    if (!formData.code.trim() || formData.code.length < 3)
+    if (!String(formData.code).trim() || String(formData.code).trim().length < 3)
       newErrors.code = 'El código es obligatorio y debe tener al menos 3 caracteres.'
-    if (!formData.name.trim()) newErrors.name = 'El nombre es obligatorio.'
-    if (!formData.presentation.trim())
+    if (!String(formData.name).trim()) newErrors.name = 'El nombre es obligatorio.'
+    if (!String(formData.presentation).trim())
       newErrors.presentation = 'La presentación es obligatoria.'
     if (formData.price === '' || Number(formData.price) < 0)
       newErrors.price = 'Ingresa un precio válido.'
@@ -50,7 +122,7 @@ export default function AdminProductoForm() {
       newErrors.stock = 'El stock debe ser un entero mayor o igual a 0.'
     if (formData.stockCritical === '' || Number(formData.stockCritical) < 0 || !Number.isInteger(Number(formData.stockCritical)))
       newErrors.stockCritical = 'El stock crítico debe ser un entero mayor o igual a 0.'
-    if (!formData.image.trim())
+    if (!String(formData.image).trim())
       newErrors.image = 'La ruta de la imagen es obligatoria.'
     const discount = Number(formData.discount)
     if (Number.isNaN(discount) || discount < 0 || discount > 100)
@@ -59,9 +131,11 @@ export default function AdminProductoForm() {
     return Object.keys(newErrors).length === 0
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!validate()) return
+    setSaving(true)
+    setSubmitError(null)
 
     const data = {
       ...formData,
@@ -71,13 +145,44 @@ export default function AdminProductoForm() {
       discount: Number(formData.discount),
     }
 
-    if (isEdit) {
-      updateProduct(id, data)
-    } else {
-      addProduct(data)
+    try {
+      if (isEdit) {
+        await updateProduct(id, data)
+      } else {
+        await createProduct(data)
+      }
+      navigate('/admin/productos')
+    } catch (err) {
+      setSubmitError(err.message || 'Error al guardar el producto.')
+    } finally {
+      setSaving(false)
     }
+  }
 
-    navigate('/admin/productos')
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <AdminPageHeader title={isEdit ? 'Editar producto' : 'Nuevo producto'} />
+        <LoadingScreen message="Cargando producto..." />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <AdminPageHeader title="Editar producto" />
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center space-y-3">
+          <p className="text-rose-700 font-medium">{loadError}</p>
+          <Link
+            to="/admin/productos"
+            className="inline-flex items-center justify-center py-2.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-lg transition-colors"
+          >
+            Volver a productos
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -90,6 +195,12 @@ export default function AdminProductoForm() {
         onSubmit={handleSubmit}
         className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-5"
       >
+        {submitError && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+            {submitError}
+          </div>
+        )}
+
         {isEdit && (
           <FormInput
             id="id"
@@ -127,7 +238,7 @@ export default function AdminProductoForm() {
           label="Categoría"
           value={formData.category}
           onChange={handleChange}
-          options={PRODUCT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+          options={categories.map((c) => ({ value: c, label: c }))}
         />
 
         <FormInput
@@ -218,9 +329,10 @@ export default function AdminProductoForm() {
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="submit"
-            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
+            disabled={saving}
+            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-50"
           >
-            {isEdit ? 'Guardar cambios' : 'Registrar'}
+            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Registrar'}
           </button>
           <Link
             to="/admin/productos"
