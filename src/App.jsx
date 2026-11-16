@@ -31,6 +31,7 @@ import AdminProductoForm from './pages/admin/AdminProductoForm'
 import AdminUsuariosPage from './pages/admin/AdminUsuariosPage'
 import AdminUsuarioForm from './pages/admin/AdminUsuarioForm'
 import AdminOrdenesPage from './pages/admin/AdminOrdenesPage'
+import AdminOrdenDetallePage from './pages/admin/AdminOrdenDetallePage'
 
 const ADMIN_ONLY = ['admin']
 const SELLER_ACCESS = ['admin', 'vendedor']
@@ -182,6 +183,14 @@ export default function App() {
             element={
               <AdminRoute allowedRoles={SELLER_ACCESS}>
                 <AdminOrdenesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="ordenes/:id"
+            element={
+              <AdminRoute allowedRoles={SELLER_ACCESS}>
+                <AdminOrdenDetallePage />
               </AdminRoute>
             }
           />

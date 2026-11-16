@@ -1,4 +1,4 @@
-﻿import { get, post } from './api.js'
+﻿import { get, post, patch, put } from './api.js'
 
 function toArray(data) {
   if (Array.isArray(data)) return data
@@ -71,6 +71,11 @@ export async function listMyOrders() {
   }
 }
 
+export async function listOrders() {
+  const data = await get('/ordenes')
+  return toOrderArray(data).map((o) => mapOrder(o))
+}
+
 export async function getOrderById(id) {
   const data = await get(`/ordenes/${id}`)
   const raw = data?.data ?? data?.orden ?? data?.order ?? data
@@ -78,6 +83,19 @@ export async function getOrderById(id) {
     return null
   }
   return mapOrder(raw)
+}
+
+export async function updateOrderStatus(id, status) {
+  const payload = { status, estado: status }
+  try {
+    const data = await patch(`/ordenes/${id}/estado`, payload)
+    const raw = data?.data ?? data?.orden ?? data?.order ?? data
+    return raw ? mapOrder(raw) : { id, status }
+  } catch {
+    const data = await put(`/ordenes/${id}`, payload)
+    const raw = data?.data ?? data?.orden ?? data?.order ?? data
+    return raw ? mapOrder(raw) : { id, status }
+  }
 }
 
 export async function createOrder(orderData) {
