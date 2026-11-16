@@ -1,62 +1,102 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useAuth } from './AuthContext.jsx'
+import * as requestsApi from '../services/requestsApi.js'
 
 const RequestContext = createContext(null)
-const STORAGE_KEY = 'vsm_requests'
 
 export function RequestProvider({ children }) {
-  const [requests, setRequests] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      return saved ? JSON.parse(saved) : []
-    } catch {
+  const { currentUser, isReady: authReady } = useAuth()
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const refreshRequests = useCallback(async () => {
+    if (!currentUser) {
+      setRequests([])
+      setError(null)
       return []
     }
-  })
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await requestsApi.listMyRequests()
+      setRequests(Array.isArray(data) ? data : [])
+      return data
+    } catch (err) {
+      setError(err.message || 'Error al cargar las solicitudes.')
+      setRequests([])
+      return []
+    } finally {
+      setLoading(false)
+    }
+  }, [currentUser])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(requests))
-  }, [requests])
-
-  function addRequest({ userId, serviceId, petName, species, requestedDate }) {
-    const request = {
-      id: `REQ-${Date.now()}`,
-      userId,
-      serviceId,
-      petName,
-      species,
-      requestedDate,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+    if (!authReady) return
+    if (!currentUser) {
+      setRequests([])
+      setError(null)
+      setLoading(false)
+      return
     }
-    setRequests((prev) => [...prev, request])
-    return request
-  }
+    let active = true
+    setLoading(true)
+    setError(null)
+    requestsApi
+      .listMyRequests()
+      .then((data) => {
+        if (!active) return
+        setRequests(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => {
+        if (!active) return
+        setError(err.message || 'Error al cargar las solicitudes.')
+        setRequests([])
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [authReady, currentUser])
 
-  function cancelRequest(id) {
+  const addRequest = useCallback(async (payload) => {
+    const created = await requestsApi.createRequest(payload)
+    setRequests((prev) => [created, ...prev])
+    return created
+  }, [])
+
+  const cancelRequest = useCallback(async (id) => {
+    const updated = await requestsApi.cancelRequest(id)
     setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'cancelled' } : r)),
+      prev.map((r) => (String(r.id) === String(id) ? { ...r, ...updated, status: updated?.status || 'cancelled' } : r)),
     )
-  }
+    return updated
+  }, [])
 
-  function updateRequest(id, updates) {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...updates } : r)),
-    )
-  }
-
-  function clearRequests() {
+  const clearRequests = useCallback(() => {
     setRequests([])
-  }
+    setError(null)
+    setLoading(false)
+  }, [])
+
+  const requestCount = useMemo(
+    () => requests.filter((r) => r.status !== 'cancelled').length,
+    [requests],
+  )
 
   const value = {
     requests,
-    requestCount: requests.filter((r) => r.status !== 'cancelled').length,
+    requestCount,
+    loading,
+    error,
     addRequest,
     cancelRequest,
-    updateRequest,
     clearRequests,
-    isReady: true,
+    refreshRequests,
+    isReady: authReady && !loading,
   }
 
   return <RequestContext.Provider value={value}>{children}</RequestContext.Provider>
