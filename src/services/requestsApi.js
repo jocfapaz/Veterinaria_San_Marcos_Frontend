@@ -99,6 +99,42 @@ export async function createRequest(payload = {}) {
   return mapRequest(raw && typeof raw === 'object' ? raw : {})
 }
 
+export async function listRequests() {
+  const data = await get('/solicitudes')
+  return toArray(data).map(mapRequest)
+}
+
+export async function getRequestById(id) {
+  const data = await get(`/solicitudes/${id}`)
+  const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
+  if (!raw || (typeof raw === 'object' && !raw.id && !raw._id && !raw.codigo && !raw.requestNumber)) {
+    return null
+  }
+  return mapRequest(raw)
+}
+
+export async function updateRequest(id, payload = {}) {
+  const body = {
+    status: payload.status,
+    estado: payload.status ?? payload.estado,
+    appointmentDate: payload.appointmentDate,
+    fechaCita: payload.appointmentDate,
+    fechaProgramada: payload.appointmentDate,
+    appointmentTime: payload.appointmentTime,
+    horaCita: payload.appointmentTime,
+    horaProgramada: payload.appointmentTime,
+  }
+  try {
+    const data = await patch(`/solicitudes/${id}`, body)
+    const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
+    return raw && typeof raw === 'object' ? mapRequest(raw) : { id, ...payload }
+  } catch {
+    const data = await put(`/solicitudes/${id}`, body)
+    const raw = data?.data ?? data?.solicitud ?? data?.request ?? data
+    return raw && typeof raw === 'object' ? mapRequest(raw) : { id, ...payload }
+  }
+}
+
 export async function cancelRequest(id) {
   const payload = { status: 'cancelled', estado: 'cancelled' }
   try {
