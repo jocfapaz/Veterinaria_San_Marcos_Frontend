@@ -423,7 +423,7 @@ module.exports = function (config) {
       subdir: '.',
       reporters: [{ type: 'text' }, { type: 'html' }, { type: 'lcovonly' }],
       check: {
-        global: { statements: 80, branches: 80, functions: 80, lines: 80 },
+        global: { statements: 70, branches: 70, functions: 70, lines: 70 },
       },
     },
     client: { jasmine: { random: true }, clearContext: false },
@@ -588,7 +588,7 @@ coverageReporter: {
   subdir: '.',
   reporters: [{ type: 'text' }, { type: 'html' }, { type: 'lcovonly' }],
   check: {
-    global: { statements: 80, branches: 80, functions: 80, lines: 80 },
+    global: { statements: 70, branches: 70, functions: 70, lines: 70 },
   },
 },
 ```
@@ -599,7 +599,7 @@ coverageReporter: {
 | `exclude` del plugin | No tiene sentido medir las propias pruebas ni los mocks de `src/test/`. `main.jsx` no aparece porque ninguna prueba lo importa. |
 | `reporters` | `text` imprime la tabla en la terminal; `html` genera `coverage/index.html`; `lcovonly` crea `coverage/lcov.info` para VS Code, SonarQube, Codecov, etc. |
 | `subdir: '.'` | Por defecto karma-coverage crea una subcarpeta con el nombre del navegador (`coverage/Chrome Headless 153…/`); así queda directo en `coverage/`. |
-| `check.global` | **Mínimos obligatorios**: si la cobertura baja del 80 %, Karma termina con error y el CI se detiene. |
+| `check.global` | **Mínimos obligatorios**: si la cobertura baja del 70 %, Karma termina con error y el CI se detiene. |
 
 > ⚠️ A diferencia de la opción `include` de Vitest, Istanbul **solo mide los archivos que alguna
 > prueba importó**. Un archivo sin ninguna prueba no aparece (en lugar de aparecer con 0 %).
@@ -640,7 +640,7 @@ La carpeta `coverage/` se regenera en cada ejecución: agrégala a `.gitignore` 
 `globalIgnores` de `eslint.config.js` (si no, ESLint revisaría los `.js` del informe). Lo mismo
 con `test-results/` (informe JUnit).
 
-> 🎯 **100 % no es la meta.** Un 80–90 % con pruebas que verifican comportamiento real vale más
+> 🎯 **100 % no es la meta.** Un 70-90 % con pruebas que verifican comportamiento real vale más
 > que un 100 % logrado con tests que solo "pasan por" el código sin comprobar nada.
 
 ---
@@ -982,7 +982,7 @@ Luego en **Settings → Pages → Source** elige **Deploy from a branch**, rama 
 | `Error: <spyOn> : fetch has already been spied upon` | Un `beforeEach` fuera de `describe` se aplica a **todos** los archivos | Mete el `beforeEach` dentro de un `describe` (Parte 6.5). |
 | Las pruebas pasan a veces y fallan otras | Orden aleatorio de Jasmine: una prueba depende de otra | Haz que cada prueba prepare su propio estado; para reproducir un orden, fija la semilla: `client: { jasmine: { random: true, seed: '12345' } }`. |
 | `npm ls jasmine-core` muestra dos versiones distintas | `karma-jasmine` trae su propio `jasmine-core` 4 | Agrega el bloque `overrides` (Parte 6.1) y ejecuta `npm install`. |
-| `Coverage for branches (…%) does not meet global threshold (80%)` | La cobertura bajó del mínimo configurado | Agrega pruebas para las líneas de *Uncovered Line #s* (o revisa `coverage/index.html`). |
+| `Coverage for branches (…%) does not meet global threshold (70%)` | La cobertura bajó del mínimo configurado | Agrega pruebas para las líneas de *Uncovered Line #s* (o revisa `coverage/index.html`). |
 | `npm error ERESOLVE unable to resolve dependency tree` … `Found: @babel/core@7…` al instalar `@babel/preset-react` | La última versión del preset (v8) exige Babel 8 y el proyecto usa Babel 7 | `npm install -D @babel/preset-react@7` |
 | Portafolio muestra "Error 403" | Límite de 60 peticiones/hora de la API de GitHub | Espera ~1 hora o prueba desde otra red. |
 | ESLint: `'describe' is not defined` / `'module' is not defined` | Faltan los globals de Jasmine o de CommonJS | Revisa los bloques `globals.jasmine` y `*.cjs` en `eslint.config.js` (Parte 7.3). |
