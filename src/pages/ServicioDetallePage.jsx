@@ -36,8 +36,8 @@ export default function ServicioDetallePage() {
     try {
       const data = await getServiceById(id)
       setService(data)
-      if (data?.category) {
-        const related = await listServicesByCategory(data.category)
+      if (data?.categoryId || data?.category) {
+        const related = await listServicesByCategory(data.categoryId || data.category)
         setRelatedServices(related.filter((s) => String(s.id) !== String(data.id)).slice(0, 3))
       } else {
         setRelatedServices([])
@@ -67,8 +67,8 @@ export default function ServicioDetallePage() {
         const data = await getServiceById(id)
         if (!active) return
         setService(data)
-        if (data?.category) {
-          const related = await listServicesByCategory(data.category)
+        if (data?.categoryId || data?.category) {
+          const related = await listServicesByCategory(data.categoryId || data.category)
           if (!active) return
           setRelatedServices(related.filter((s) => String(s.id) !== String(data.id)).slice(0, 3))
         } else {

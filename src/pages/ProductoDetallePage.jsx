@@ -29,8 +29,8 @@ export default function ProductoDetallePage() {
     try {
       const data = await getProductById(id)
       setProduct(data)
-      if (data?.category) {
-        const related = await listProductsByCategory(data.category)
+      if (data?.categoryId || data?.category) {
+        const related = await listProductsByCategory(data.categoryId || data.category)
         setRelatedProducts(related.filter((p) => String(p.id) !== String(data.id)).slice(0, 3))
       } else {
         setRelatedProducts([])
@@ -55,8 +55,8 @@ export default function ProductoDetallePage() {
         const data = await getProductById(id)
         if (!active) return
         setProduct(data)
-        if (data?.category) {
-          const related = await listProductsByCategory(data.category)
+        if (data?.categoryId || data?.category) {
+          const related = await listProductsByCategory(data.categoryId || data.category)
           if (!active) return
           setRelatedProducts(related.filter((p) => String(p.id) !== String(data.id)).slice(0, 3))
         } else {

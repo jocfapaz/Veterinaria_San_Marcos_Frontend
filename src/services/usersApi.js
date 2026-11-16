@@ -67,25 +67,25 @@ function toUserPayload(data = {}) {
 }
 
 export async function listUsers() {
-  const data = await get('/usuarios')
+  const data = await get('/users')
   return toArray(data).map(mapUser)
 }
 
 export async function getUserById(id) {
-  const data = await get(`/usuarios/${id}`)
+  const data = await get(`/users/${id}`)
   return data ? mapUser(data) : null
 }
 
 export async function createUser(userData) {
-  const data = await post('/usuarios', toUserPayload(userData))
+  const data = await post('/users', toUserPayload(userData))
   return data ? mapUser(data) : null
 }
 
 export async function updateUser(id, userData) {
-  const data = await put(`/usuarios/${id}`, toUserPayload(userData))
+  const data = await put(`/users/${id}`, toUserPayload(userData))
   return data ? mapUser(data) : null
 }
 
 export async function deleteUser(id) {
-  return del(`/usuarios/${id}`)
+  return del(`/users/${id}`)
 }

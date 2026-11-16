@@ -1,12 +1,11 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
-  getServiceById,
+  getAdminServiceById,
   createService,
   updateService,
-  listServices,
+  listCategories,
 } from '../../services/servicesApi.js'
-import { SERVICE_CATEGORIES } from '../../mockDB.js'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import FormInput from '../../components/admin/FormInput'
 import FormSelect from '../../components/admin/FormSelect'
@@ -23,10 +22,9 @@ const SPECIES_OPTIONS = [
 ]
 
 const INITIAL_FORM = {
-  code: '',
   name: '',
   description: '',
-  category: SERVICE_CATEGORIES[0] || '',
+  categoryId: '',
   species: 'Perro',
   duration: '',
   price: '',
@@ -40,7 +38,7 @@ export default function AdminServicioForm() {
   const isEdit = Boolean(id)
 
   const [formData, setFormData] = useState(INITIAL_FORM)
-  const [categories, setCategories] = useState(SERVICE_CATEGORIES)
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [loadError, setLoadError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -51,11 +49,10 @@ export default function AdminServicioForm() {
     let active = true
     ;(async () => {
       try {
-        const all = await listServices()
-        const cats = [...new Set(all.map((s) => s.category).filter(Boolean))]
+        const cats = await listCategories('SERVICIO')
         if (active && cats.length) setCategories(cats)
       } catch {
-        /* fallback a constantes */
+        /* fallback a vacío */
       }
     })()
     return () => {
@@ -70,17 +67,16 @@ export default function AdminServicioForm() {
       setLoading(true)
       setLoadError(null)
       try {
-        const service = await getServiceById(id)
+        const service = await getAdminServiceById(id)
         if (!active) return
         if (!service) {
           setLoadError('Servicio no encontrado.')
           return
         }
         setFormData({
-          code: service.code || '',
           name: service.name || '',
           description: service.description || '',
-          category: service.category || SERVICE_CATEGORIES[0] || '',
+          categoryId: service.categoryId || '',
           species: service.species || 'Perro',
           duration: service.duration || '',
           price: service.price ?? '',
@@ -107,9 +103,9 @@ export default function AdminServicioForm() {
 
   function validate() {
     const newErrors = {}
-    if (!String(formData.code).trim() || String(formData.code).trim().length < 3)
-      newErrors.code = 'El código es obligatorio y debe tener al menos 3 caracteres.'
     if (!String(formData.name).trim()) newErrors.name = 'El nombre es obligatorio.'
+    if (!String(formData.categoryId).trim())
+      newErrors.categoryId = 'La categoría es obligatoria.'
     if (!String(formData.duration).trim())
       newErrors.duration = 'La duración es obligatoria.'
     if (formData.price === '' || Number(formData.price) < 0)
@@ -128,6 +124,7 @@ export default function AdminServicioForm() {
 
     const data = {
       ...formData,
+      categoryId: Number(formData.categoryId),
       price: Number(formData.price),
     }
 
@@ -199,16 +196,6 @@ export default function AdminServicioForm() {
         )}
 
         <FormInput
-          id="code"
-          name="code"
-          label="Código"
-          value={formData.code}
-          onChange={handleChange}
-          error={errors.code}
-          required
-        />
-
-        <FormInput
           id="name"
           name="name"
           label="Nombre del servicio"
@@ -228,12 +215,16 @@ export default function AdminServicioForm() {
         />
 
         <FormSelect
-          id="category"
-          name="category"
+          id="categoryId"
+          name="categoryId"
           label="Categoría"
-          value={formData.category}
+          value={formData.categoryId}
           onChange={handleChange}
-          options={categories.map((c) => ({ value: c, label: c }))}
+          options={[
+            { value: '', label: '-- Seleccione una categoría --' },
+            ...categories.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+          error={errors.categoryId}
         />
 
         <FormSelect

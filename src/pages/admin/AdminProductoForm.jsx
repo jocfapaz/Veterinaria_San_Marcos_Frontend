@@ -1,12 +1,11 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
-  getProductById,
+  getAdminProductById,
   createProduct,
   updateProduct,
-  listProductCategories,
+  listCategories,
 } from '../../services/productsApi.js'
-import { PRODUCT_CATEGORIES } from '../../mockDB.js'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import FormInput from '../../components/admin/FormInput'
 import FormSelect from '../../components/admin/FormSelect'
@@ -14,10 +13,9 @@ import FormTextarea from '../../components/admin/FormTextarea'
 import LoadingScreen from '../../components/LoadingScreen'
 
 const INITIAL_FORM = {
-  code: '',
   name: '',
   description: '',
-  category: PRODUCT_CATEGORIES[0] || '',
+  categoryId: '',
   presentation: '',
   price: '',
   stock: 0,
@@ -32,7 +30,7 @@ export default function AdminProductoForm() {
   const isEdit = Boolean(id)
 
   const [formData, setFormData] = useState(INITIAL_FORM)
-  const [categories, setCategories] = useState(PRODUCT_CATEGORIES)
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(isEdit)
   const [loadError, setLoadError] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -43,10 +41,10 @@ export default function AdminProductoForm() {
     let active = true
     ;(async () => {
       try {
-        const cats = await listProductCategories()
+        const cats = await listCategories('PRODUCTO')
         if (active && cats.length) setCategories(cats)
       } catch {
-        /* fallback a constantes */
+        /* fallback a vacío */
       }
     })()
     return () => {
@@ -61,17 +59,16 @@ export default function AdminProductoForm() {
       setLoading(true)
       setLoadError(null)
       try {
-        const product = await getProductById(id)
+        const product = await getAdminProductById(id)
         if (!active) return
         if (!product) {
           setLoadError('Producto no encontrado.')
           return
         }
         setFormData({
-          code: product.code || '',
           name: product.name || '',
           description: product.description || '',
-          category: product.category || PRODUCT_CATEGORIES[0] || '',
+          categoryId: product.categoryId || '',
           presentation: product.presentation || '',
           price: product.price ?? '',
           stock: product.stock ?? 0,
@@ -99,9 +96,9 @@ export default function AdminProductoForm() {
 
   function validate() {
     const newErrors = {}
-    if (!String(formData.code).trim() || String(formData.code).trim().length < 3)
-      newErrors.code = 'El código es obligatorio y debe tener al menos 3 caracteres.'
     if (!String(formData.name).trim()) newErrors.name = 'El nombre es obligatorio.'
+    if (!String(formData.categoryId).trim())
+      newErrors.categoryId = 'La categoría es obligatoria.'
     if (!String(formData.presentation).trim())
       newErrors.presentation = 'La presentación es obligatoria.'
     if (formData.price === '' || Number(formData.price) < 0)
@@ -127,6 +124,7 @@ export default function AdminProductoForm() {
 
     const data = {
       ...formData,
+      categoryId: Number(formData.categoryId),
       price: Number(formData.price),
       stock: Number(formData.stock),
       stockCritical: Number(formData.stockCritical),
@@ -201,16 +199,6 @@ export default function AdminProductoForm() {
         )}
 
         <FormInput
-          id="code"
-          name="code"
-          label="Código"
-          value={formData.code}
-          onChange={handleChange}
-          error={errors.code}
-          required
-        />
-
-        <FormInput
           id="name"
           name="name"
           label="Nombre del producto"
@@ -221,12 +209,16 @@ export default function AdminProductoForm() {
         />
 
         <FormSelect
-          id="category"
-          name="category"
+          id="categoryId"
+          name="categoryId"
           label="Categoría"
-          value={formData.category}
+          value={formData.categoryId}
           onChange={handleChange}
-          options={categories.map((c) => ({ value: c, label: c }))}
+          options={[
+            { value: '', label: '-- Seleccione una categoría --' },
+            ...categories.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+          error={errors.categoryId}
         />
 
         <FormInput

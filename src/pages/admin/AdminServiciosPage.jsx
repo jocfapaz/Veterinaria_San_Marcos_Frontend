@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { listServices, deleteService } from '../../services/servicesApi.js'
+import { listAdminServices, deleteService } from '../../services/servicesApi.js'
 import { useAuth } from '../../contexts/AuthContext.jsx'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import AdminTable from '../../components/admin/AdminTable'
@@ -18,7 +18,7 @@ export default function AdminServiciosPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await listServices()
+      const data = await listAdminServices()
       setServices(data)
     } catch (err) {
       setError(err.message || 'Error al cargar los servicios.')
@@ -33,7 +33,7 @@ export default function AdminServiciosPage() {
       setLoading(true)
       setError(null)
       try {
-        const data = await listServices()
+        const data = await listAdminServices()
         if (active) setServices(data)
       } catch (err) {
         if (active) setError(err.message || 'Error al cargar los servicios.')

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { listProducts, deleteProduct } from '../../services/productsApi.js'
+import { listAdminProducts, deleteProduct } from '../../services/productsApi.js'
 import { useAuth } from '../../contexts/AuthContext.jsx'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import AdminTable from '../../components/admin/AdminTable'
@@ -22,7 +22,7 @@ export default function AdminProductosPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await listProducts()
+      const data = await listAdminProducts()
       setProducts(data)
     } catch (err) {
       setError(err.message || 'Error al cargar los productos.')
@@ -37,7 +37,7 @@ export default function AdminProductosPage() {
       setLoading(true)
       setError(null)
       try {
-        const data = await listProducts()
+        const data = await listAdminProducts()
         if (active) setProducts(data)
       } catch (err) {
         if (active) setError(err.message || 'Error al cargar los productos.')
