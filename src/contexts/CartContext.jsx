@@ -1,10 +1,8 @@
-/* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react'
-import {
-  getProductById,
-  calculateDiscountedPrice,
-  createOrder,
-} from '../mockDB.js'
+﻿/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { getProductById } from '../services/productsApi.js'
+import { createOrder as createOrderApi } from '../services/ordersApi.js'
+import { calculateDiscountedPrice } from '../utils/format.js'
 
 const CartContext = createContext(null)
 const STORAGE_KEY = 'vsm_cart'
@@ -18,17 +16,68 @@ export function CartProvider({ children }) {
       return []
     }
   })
+  const [details, setDetails] = useState({})
+  const [detailsLoading, setDetailsLoading] = useState(false)
+  const [detailsError, setDetailsError] = useState(null)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
   }, [items])
 
+  useEffect(() => {
+    let active = true
+    const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))]
+    if (ids.length === 0) {
+      setDetails({})
+      setDetailsLoading(false)
+      setDetailsError(null)
+      return () => {
+        active = false
+      }
+    }
+    ;(async () => {
+      setDetailsLoading(true)
+      setDetailsError(null)
+      try {
+        const results = await Promise.allSettled(ids.map((id) => getProductById(id)))
+        if (!active) return
+        const next = {}
+        let hadError = false
+        results.forEach((res, idx) => {
+          const id = ids[idx]
+          if (res.status === 'fulfilled' && res.value) {
+            next[id] = res.value
+          } else {
+            hadError = true
+          }
+        })
+        setDetails((prev) => {
+          const merged = { ...prev }
+          ids.forEach((id) => {
+            if (next[id]) merged[id] = next[id]
+          })
+          return merged
+        })
+        if (hadError && Object.keys(next).length === 0) {
+          setDetailsError('No se pudieron cargar los productos del carrito.')
+        }
+      } catch (err) {
+        if (active) setDetailsError(err.message || 'Error al cargar el carrito.')
+      } finally {
+        if (active) setDetailsLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [items])
+
   function addToCart(productId, quantity = 1) {
     setItems((prev) => {
-      const existing = prev.find((item) => item.productId === productId)
+      const existing = prev.find((item) => String(item.productId) === String(productId))
       if (existing) {
         return prev.map((item) =>
-          item.productId === productId
+          String(item.productId) === String(productId)
             ? { ...item, quantity: item.quantity + quantity }
             : item,
         )
@@ -38,7 +87,7 @@ export function CartProvider({ children }) {
   }
 
   function removeFromCart(productId) {
-    setItems((prev) => prev.filter((item) => item.productId !== productId))
+    setItems((prev) => prev.filter((item) => String(item.productId) !== String(productId)))
   }
 
   function updateQuantity(productId, quantity) {
@@ -48,7 +97,7 @@ export function CartProvider({ children }) {
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.productId === productId ? { ...item, quantity } : item,
+        String(item.productId) === String(productId) ? { ...item, quantity } : item,
       ),
     )
   }
@@ -57,30 +106,63 @@ export function CartProvider({ children }) {
     setItems([])
   }
 
-  function cartTotal() {
-    return items.reduce((total, item) => {
-      const product = getProductById(item.productId)
-      if (!product) return total
-      const price = calculateDiscountedPrice(product.price, product.discount)
-      return total + price * item.quantity
-    }, 0)
-  }
+  const enrichedItems = useMemo(
+    () =>
+      items.map((item) => {
+        const product = details[item.productId] || details[String(item.productId)] || null
+        const unitPrice = product
+          ? calculateDiscountedPrice(product.price, product.discount)
+          : 0
+        return {
+          ...item,
+          product,
+          unitPrice,
+          subtotal: unitPrice * item.quantity,
+        }
+      }),
+    [items, details],
+  )
 
-  function checkout({ userId, shippingAddress, instructions = '' }) {
-    const order = createOrder({
+  const cartTotal = useMemo(
+    () => enrichedItems.reduce((sum, item) => sum + (item.subtotal || 0), 0),
+    [enrichedItems],
+  )
+
+  const cartCount = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items],
+  )
+
+  async function checkout({ userId, shippingAddress, instructions = '', customer, deliveryType } = {}) {
+    const displayItems = enrichedItems.map((it) => ({
+      productId: it.productId,
+      name: it.product?.name || 'Producto',
+      price: Number(it.product?.price) || 0,
+      discount: Number(it.product?.discount) || 0,
+      quantity: it.quantity,
+      subtotal: it.subtotal,
+      image: it.product?.image || '',
+    }))
+    const order = await createOrderApi({
       userId,
       items,
+      displayItems,
       shippingAddress,
       instructions,
+      customer,
+      deliveryType,
     })
-    clearCart()
+    setItems([])
     return order
   }
 
   const value = {
     items,
-    cartCount: items.reduce((sum, item) => sum + item.quantity, 0),
-    cartTotal: cartTotal(),
+    enrichedItems,
+    cartCount,
+    cartTotal,
+    detailsLoading,
+    detailsError,
     addToCart,
     removeFromCart,
     updateQuantity,
