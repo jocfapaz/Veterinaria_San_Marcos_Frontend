@@ -1,4 +1,4 @@
-﻿import { get } from './api.js'
+﻿import { get, post, put, del } from './api.js'
 import { normalizeImagePath } from '../utils/imageUrl.js'
 
 function toArray(data) {
@@ -11,17 +11,44 @@ function toArray(data) {
 }
 
 function mapService(dto = {}) {
+  const raw = dto?.data ?? dto?.servicio ?? dto
+  const d = raw && typeof raw === 'object' ? raw : dto
   return {
-    ...dto,
-    id: dto.id ?? dto._id ?? dto.code ?? dto.codigo,
-    name: dto.name ?? dto.nombre ?? '',
-    category: dto.category ?? dto.categoria ?? '',
-    species: dto.species ?? dto.especie ?? dto.especies ?? '',
-    duration: dto.duration ?? dto.duracion ?? '',
-    description: dto.description ?? dto.descripcion ?? '',
-    note: dto.note ?? dto.nota ?? dto.observaciones ?? '',
-    price: Number(dto.price ?? dto.precio ?? 0) || 0,
-    image: normalizeImagePath(dto.image ?? dto.imagen ?? dto.imageUrl ?? dto.imagenUrl ?? ''),
+    ...d,
+    id: d.id ?? d._id ?? d.code ?? d.codigo,
+    code: d.code ?? d.codigo ?? '',
+    name: d.name ?? d.nombre ?? '',
+    category: d.category ?? d.categoria ?? '',
+    species: d.species ?? d.especie ?? d.especies ?? '',
+    duration: d.duration ?? d.duracion ?? '',
+    description: d.description ?? d.descripcion ?? '',
+    note: d.note ?? d.nota ?? d.observaciones ?? '',
+    price: Number(d.price ?? d.precio ?? 0) || 0,
+    image: normalizeImagePath(d.image ?? d.imagen ?? d.imageUrl ?? d.imagenUrl ?? ''),
+  }
+}
+
+function toServicePayload(data = {}) {
+  return {
+    code: data.code,
+    codigo: data.code,
+    name: data.name,
+    nombre: data.name,
+    description: data.description,
+    descripcion: data.description,
+    category: data.category,
+    categoria: data.category,
+    species: data.species,
+    especie: data.species,
+    duration: data.duration,
+    duracion: data.duration,
+    price: Number(data.price) || 0,
+    precio: Number(data.price) || 0,
+    note: data.note,
+    nota: data.note,
+    observaciones: data.note,
+    image: data.image,
+    imagen: data.image,
   }
 }
 
@@ -45,4 +72,18 @@ export async function getServiceById(id) {
   const data = await get(`/servicios/${id}`)
   const raw = data?.data ?? data?.servicio ?? data
   return raw ? mapService(raw) : null
+}
+
+export async function createService(serviceData) {
+  const data = await post('/servicios', toServicePayload(serviceData))
+  return data ? mapService(data) : null
+}
+
+export async function updateService(id, serviceData) {
+  const data = await put(`/servicios/${id}`, toServicePayload(serviceData))
+  return data ? mapService(data) : null
+}
+
+export async function deleteService(id) {
+  return del(`/servicios/${id}`)
 }
