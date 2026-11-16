@@ -1,50 +1,90 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import {
   getUserById,
-  registerUser,
+  createUser,
   updateUser,
-  validateRun,
-  formatRun,
-  REGIONS,
-  COMMUNES_BY_REGION,
-  USER_ROLES,
-} from '../../mockDB.js'
+} from '../../services/usersApi.js'
+import { validateRun, formatRun } from '../../utils/run.js'
+import { REGIONS, COMMUNES_BY_REGION } from '../../constants/regions.js'
 import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import FormInput from '../../components/admin/FormInput'
 import FormSelect from '../../components/admin/FormSelect'
+import LoadingScreen from '../../components/LoadingScreen'
 
-const ROLE_OPTIONS = USER_ROLES.map((role) => {
-  const labels = {
-    admin: 'Administrador',
-    vendedor: 'Vendedor',
-    veterinario: 'Veterinario',
-    client: 'Cliente',
-  }
-  return { value: role, label: labels[role] }
-})
+const ROLE_OPTIONS = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'vendedor', label: 'Vendedor' },
+  { value: 'veterinario', label: 'Veterinario' },
+  { value: 'client', label: 'Cliente' },
+]
+
+const INITIAL_FORM = {
+  run: '',
+  email: '',
+  password: '',
+  firstName: '',
+  lastName: '',
+  role: 'client',
+  birthDate: '',
+  phone: '',
+  address: '',
+  region: REGIONS[0],
+  commune: COMMUNES_BY_REGION[REGIONS[0]]?.[0] || '',
+}
 
 export default function AdminUsuarioForm() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isEdit = Boolean(id)
-  const user = isEdit ? getUserById(id) : null
 
-  const [formData, setFormData] = useState({
-    run: user?.run || '',
-    email: user?.email || '',
-    password: '',
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    role: user?.role || 'client',
-    birthDate: user?.birthDate || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    region: user?.region || REGIONS[0],
-    commune: user?.commune || '',
-  })
+  const [formData, setFormData] = useState(INITIAL_FORM)
+  const [originalEmail, setOriginalEmail] = useState('')
   const [errors, setErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
+  const [loading, setLoading] = useState(isEdit)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!isEdit) return
+
+    let active = true
+    ;(async () => {
+      setLoading(true)
+      setSubmitError('')
+      try {
+        const user = await getUserById(id)
+        if (!active) return
+        if (!user) {
+          setSubmitError('Usuario no encontrado.')
+          setLoading(false)
+          return
+        }
+        setOriginalEmail(user.email)
+        setFormData({
+          run: user.run || '',
+          email: user.email || '',
+          password: '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          role: user.role || 'client',
+          birthDate: user.birthDate || '',
+          phone: user.phone || '',
+          address: user.address || '',
+          region: user.region || REGIONS[0],
+          commune: user.commune || '',
+        })
+      } catch (err) {
+        if (active) setSubmitError(err.message || 'Error al cargar el usuario.')
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [id, isEdit])
 
   const communeOptions = (COMMUNES_BY_REGION[formData.region] || []).map((c) => ({
     value: c,
@@ -86,11 +126,14 @@ export default function AdminUsuarioForm() {
     return Object.keys(newErrors).length === 0
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!validate()) return
 
-    const data = {
+    setSaving(true)
+    setSubmitError('')
+
+    const payload = {
       run: formatRun(formData.run),
       firstName: formData.firstName,
       lastName: formData.lastName,
@@ -100,29 +143,33 @@ export default function AdminUsuarioForm() {
       address: formData.address,
       region: formData.region,
       commune: formData.commune,
+      password: formData.password,
     }
 
     if (isEdit) {
-      if (formData.email !== user.email) {
-        data.email = formData.email
+      if (formData.email !== originalEmail) {
+        payload.email = formData.email
       }
-      if (formData.password.trim()) {
-        data.password = formData.password
-      }
-      updateUser(id, data)
-      navigate('/admin/usuarios')
     } else {
-      try {
-        registerUser({
-          email: formData.email,
-          password: formData.password,
-          ...data,
-        })
-        navigate('/admin/usuarios')
-      } catch (error) {
-        setSubmitError(error.message)
-      }
+      payload.email = formData.email
     }
+
+    try {
+      if (isEdit) {
+        await updateUser(id, payload)
+      } else {
+        await createUser(payload)
+      }
+      navigate('/admin/usuarios')
+    } catch (err) {
+      setSubmitError(err.message || 'Error al guardar el usuario.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return <LoadingScreen message="Cargando usuario..." />
   }
 
   return (
@@ -267,9 +314,10 @@ export default function AdminUsuarioForm() {
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="submit"
-            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
+            disabled={saving}
+            className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-semibold rounded-lg shadow-sm transition-colors"
           >
-            {isEdit ? 'Guardar cambios' : 'Registrar'}
+            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Registrar'}
           </button>
           <Link
             to="/admin/usuarios"
