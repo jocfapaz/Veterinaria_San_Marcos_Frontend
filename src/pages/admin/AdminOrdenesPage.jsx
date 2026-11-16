@@ -1,11 +1,5 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import {
-  getRequests,
-  getUserById,
-  getServiceById,
-  updateRequestStatus,
-} from '../../mockDB.js'
 import { listOrders, updateOrderStatus } from '../../services/ordersApi.js'
 import { formatPrice } from '../../utils/format.js'
 import { useAuth } from '../../contexts/AuthContext.jsx'
@@ -13,13 +7,6 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import AdminTable from '../../components/admin/AdminTable'
 import StatusBadge from '../../components/admin/StatusBadge'
 import LoadingScreen from '../../components/LoadingScreen'
-
-const REQUEST_STATUSES = [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'confirmed', label: 'Confirmada' },
-  { value: 'completed', label: 'Completada' },
-  { value: 'cancelled', label: 'Cancelada' },
-]
 
 const ORDER_STATUSES = [
   { value: 'paid', label: 'Pagada' },
@@ -30,9 +17,9 @@ const ORDER_STATUSES = [
 ]
 
 function formatDate(value) {
-  if (!value) return '—'
+  if (!value) return '-'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
+  if (Number.isNaN(date.getTime())) return '-'
   return date.toLocaleDateString('es-CL', {
     year: 'numeric',
     month: 'short',
@@ -45,18 +32,16 @@ function getCustomerName(order) {
   const name = `${c.firstName || c.nombre || ''} ${c.lastName || c.apellido || ''}`.trim()
   if (name) return name
   if (c.email || c.correo) return c.email || c.correo
-  return order?.userId || order?.usuarioId || '—'
+  return order?.userId || order?.usuarioId || '-'
 }
 
 export default function AdminOrdenesPage() {
-  const [requests, setRequests] = useState(getRequests())
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [actionError, setActionError] = useState(null)
   const [updatingId, setUpdatingId] = useState(null)
-  const { isAdmin, isSeller } = useAuth()
-  const showRequests = !isSeller
+  const { isAdmin } = useAuth()
 
   async function loadOrders() {
     setLoading(true)
@@ -90,15 +75,6 @@ export default function AdminOrdenesPage() {
     }
   }, [])
 
-  function refreshRequests() {
-    setRequests(getRequests())
-  }
-
-  function handleRequestStatusChange(id, status) {
-    updateRequestStatus(id, status)
-    refreshRequests()
-  }
-
   async function handleOrderStatusChange(id, status) {
     setUpdatingId(id)
     setActionError(null)
@@ -114,77 +90,9 @@ export default function AdminOrdenesPage() {
 
   return (
     <div className="space-y-8">
-      <AdminPageHeader title={showRequests ? 'Órdenes y solicitudes' : 'Órdenes de compra'} />
-
-      {showRequests && (
-        <section>
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">
-            Solicitudes de servicios
-          </h2>
-          <AdminTable
-            headers={['ID', 'Cliente', 'Servicio', 'Mascota', 'Fecha', 'Estado']}
-          >
-            {requests.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="py-6 px-4 text-center text-sm text-slate-500"
-                >
-                  No hay solicitudes registradas.
-                </td>
-              </tr>
-            ) : (
-              requests.map((request) => {
-                const user = getUserById(request.userId)
-                const service = getServiceById(request.serviceId)
-                return (
-                  <tr key={request.id}>
-                    <td className="py-3 px-4 font-medium">{request.id}</td>
-                    <td className="py-3 px-4">
-                      {user ? `${user.firstName} ${user.lastName}` : request.userId}
-                    </td>
-                    <td className="py-3 px-4">
-                      {service ? service.name : request.serviceId}
-                    </td>
-                    <td className="py-3 px-4">
-                      {request.petName} ({request.species})
-                    </td>
-                    <td className="py-3 px-4">
-                      {formatDate(request.requestedDate)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={request.status} />
-                        {isAdmin && (
-                          <select
-                            value={request.status}
-                            onChange={(e) =>
-                              handleRequestStatusChange(request.id, e.target.value)
-                            }
-                            className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-emerald-500"
-                          >
-                            {REQUEST_STATUSES.map((s) => (
-                              <option key={s.value} value={s.value}>
-                                {s.label}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </AdminTable>
-        </section>
-      )}
+      <AdminPageHeader title="Órdenes de compra" />
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">
-          Órdenes de compra
-        </h2>
-
         {actionError && (
           <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             {actionError}
