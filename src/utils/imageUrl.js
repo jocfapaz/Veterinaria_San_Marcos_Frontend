@@ -3,5 +3,9 @@
   if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:') || path.startsWith('blob:')) {
     return path
   }
-  return path.startsWith('/') ? path : `/${path}`
+  let clean = path
+  if (clean.startsWith('assets/')) {
+    clean = clean.slice('assets/'.length)
+  }
+  return clean.startsWith('/') ? clean : `/${clean}`
 }
