@@ -12,7 +12,7 @@ export default function AdminSidebar() {
   } = useAuth()
 
   const links = [
-    { label: 'Dashboard', to: '/admin', visible: true },
+    { label: 'Dashboard', to: '/admin', visible: isAdmin },
     {
       label: 'Servicios',
       to: '/admin/servicios',

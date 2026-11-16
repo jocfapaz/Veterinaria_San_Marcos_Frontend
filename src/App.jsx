@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router'
+import { Routes, Route, Navigate } from 'react-router'
+import { useAuth } from './contexts/AuthContext.jsx'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import ServiciosPage from './pages/ServiciosPage'
@@ -40,6 +41,14 @@ const SELLER_ACCESS = ['admin', 'vendedor']
 const SERVICE_ACCESS = ['admin', 'vendedor', 'veterinario']
 const REQUEST_ACCESS = ['admin', 'veterinario']
 const STAFF_ACCESS = ['admin', 'vendedor', 'veterinario']
+
+function AdminIndexRedirect() {
+  const { role } = useAuth()
+  if (role === 'admin') return <AdminDashboard />
+  if (role === 'vendedor') return <Navigate to="/admin/productos" replace />
+  if (role === 'veterinario') return <Navigate to="/admin/servicios" replace />
+  return <Navigate to="/" replace />
+}
 
 export default function App() {
   return (
@@ -108,7 +117,7 @@ export default function App() {
             </AdminRoute>
           }
         >
-          <Route index element={<AdminDashboard />} />
+          <Route index element={<AdminIndexRedirect />} />
           <Route
             path="servicios"
             element={
