@@ -32,10 +32,13 @@ import AdminUsuariosPage from './pages/admin/AdminUsuariosPage'
 import AdminUsuarioForm from './pages/admin/AdminUsuarioForm'
 import AdminOrdenesPage from './pages/admin/AdminOrdenesPage'
 import AdminOrdenDetallePage from './pages/admin/AdminOrdenDetallePage'
+import AdminSolicitudesPage from './pages/admin/AdminSolicitudesPage'
+import AdminSolicitudDetallePage from './pages/admin/AdminSolicitudDetallePage'
 
 const ADMIN_ONLY = ['admin']
 const SELLER_ACCESS = ['admin', 'vendedor']
 const SERVICE_ACCESS = ['admin', 'vendedor', 'veterinario']
+const REQUEST_ACCESS = ['admin', 'veterinario']
 const STAFF_ACCESS = ['admin', 'vendedor', 'veterinario']
 
 export default function App() {
@@ -175,6 +178,22 @@ export default function App() {
             element={
               <AdminRoute allowedRoles={ADMIN_ONLY}>
                 <AdminUsuarioForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="solicitudes"
+            element={
+              <AdminRoute allowedRoles={REQUEST_ACCESS}>
+                <AdminSolicitudesPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="solicitudes/:id"
+            element={
+              <AdminRoute allowedRoles={REQUEST_ACCESS}>
+                <AdminSolicitudDetallePage />
               </AdminRoute>
             }
           />

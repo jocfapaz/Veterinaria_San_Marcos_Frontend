@@ -7,6 +7,8 @@ export default function AdminSidebar() {
     canManageProducts,
     canManageUsers,
     canManageOrders,
+    isAdmin,
+    isVeterinario,
   } = useAuth()
 
   const links = [
@@ -25,6 +27,11 @@ export default function AdminSidebar() {
       label: 'Usuarios',
       to: '/admin/usuarios',
       visible: canManageUsers,
+    },
+    {
+      label: 'Solicitudes',
+      to: '/admin/solicitudes',
+      visible: isAdmin || isVeterinario,
     },
     {
       label: 'Órdenes',
