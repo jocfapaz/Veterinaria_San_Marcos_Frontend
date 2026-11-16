@@ -1,22 +1,25 @@
-import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import {
-  getServiceById,
-  getServicesByCategory,
-  formatPrice,
-} from '../mockDB.js'
+import { getServiceById, listServicesByCategory } from '../services/servicesApi.js'
+import { formatPrice } from '../utils/format.js'
+import { normalizeImagePath } from '../utils/imageUrl.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { useRequests } from '../contexts/RequestContext.jsx'
 import Breadcrumbs from '../components/Breadcrumbs'
 import Button from '../components/Button'
 import ServiceCard from '../components/ServiceCard'
+import LoadingScreen from '../components/LoadingScreen'
 
 export default function ServicioDetallePage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { currentUser } = useAuth()
   const { addRequest } = useRequests()
-  const service = getServiceById(id)
+
+  const [service, setService] = useState(null)
+  const [relatedServices, setRelatedServices] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   const [petOption, setPetOption] = useState('')
   const [newPetName, setNewPetName] = useState('')
@@ -24,6 +27,104 @@ export default function ServicioDetallePage() {
   const [date, setDate] = useState('')
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState(false)
+
+  async function load() {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await getServiceById(id)
+      setService(data)
+      if (data?.category) {
+        const related = await listServicesByCategory(data.category)
+        setRelatedServices(related.filter((s) => String(s.id) !== String(data.id)).slice(0, 3))
+      } else {
+        setRelatedServices([])
+      }
+    } catch (err) {
+      setError(err.message || 'Error al cargar el servicio.')
+      setService(null)
+      setRelatedServices([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let active = true
+    setPetOption('')
+    setNewPetName('')
+    setNewPetSpecies('Perro')
+    setDate('')
+    setErrors({})
+    setSuccess(false)
+    ;(async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const data = await getServiceById(id)
+        if (!active) return
+        setService(data)
+        if (data?.category) {
+          const related = await listServicesByCategory(data.category)
+          if (!active) return
+          setRelatedServices(related.filter((s) => String(s.id) !== String(data.id)).slice(0, 3))
+        } else {
+          setRelatedServices([])
+        }
+      } catch (err) {
+        if (active) {
+          setError(err.message || 'Error al cargar el servicio.')
+          setService(null)
+          setRelatedServices([])
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <Breadcrumbs
+          items={[
+            { label: 'Inicio', to: '/' },
+            { label: 'Servicios', to: '/servicios' },
+            { label: 'Cargando...' },
+          ]}
+        />
+        <LoadingScreen message="Cargando servicio..." />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <Breadcrumbs
+          items={[
+            { label: 'Inicio', to: '/' },
+            { label: 'Servicios', to: '/servicios' },
+            { label: 'Error' },
+          ]}
+        />
+        <div className="mt-8 text-center py-16 bg-white rounded-2xl border border-rose-200 shadow-sm space-y-4">
+          <h1 className="text-2xl font-bold text-slate-900">No se pudo cargar el servicio</h1>
+          <p className="text-rose-600">{error}</p>
+          <button
+            type="button"
+            onClick={load}
+            className="inline-flex items-center justify-center py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg shadow-sm transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (!service) {
     return (
@@ -54,10 +155,7 @@ export default function ServicioDetallePage() {
   }
 
   const pets = currentUser?.pets || []
-
-  const relatedServices = getServicesByCategory(service.category)
-    .filter((s) => s.id !== service.id)
-    .slice(0, 3)
+  const imageSrc = normalizeImagePath(service.image)
 
   function validate() {
     const newErrors = {}
@@ -122,12 +220,16 @@ export default function ServicioDetallePage() {
       />
 
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <div className="flex justify-center bg-slate-50 rounded-xl p-4 border border-slate-100">
-          <img
-            src={service.image}
-            alt={service.name}
-            className="w-full max-w-md h-auto object-cover rounded-lg shadow-sm"
-          />
+        <div className="flex justify-center bg-slate-50 rounded-xl p-4 border border-slate-100 min-h-[16rem]">
+          {imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={service.name}
+              className="w-full max-w-md h-auto object-cover rounded-lg shadow-sm"
+            />
+          ) : (
+            <div className="flex items-center justify-center text-slate-400">Sin imagen</div>
+          )}
         </div>
 
         <div className="space-y-5">
@@ -143,10 +245,8 @@ export default function ServicioDetallePage() {
           </p>
 
           <p className="text-slate-600 leading-relaxed text-sm">
-            Servicio profesional de {service.name.toLowerCase()} para{' '}
-            {service.species.toLowerCase()}. Duración aproximada{' '}
-            {service.duration}. Atención realizada por nuestro equipo médico
-            veterinario con equipamiento especializado.
+            {service.description ||
+              `Servicio profesional de ${String(service.name || '').toLowerCase()} para ${String(service.species || '').toLowerCase()}. Duración aproximada ${service.duration}. Atención realizada por nuestro equipo médico veterinario con equipamiento especializado.`}
           </p>
 
           {service.note && (
@@ -261,7 +361,7 @@ export default function ServicioDetallePage() {
 
             {success && (
               <div className="p-3 text-sm text-emerald-800 rounded-lg bg-emerald-50 border border-emerald-200">
-                ✅ Solicitud enviada. Revisa tu solicitud en "Mi solicitud".
+                ✓ Solicitud enviada. Revisa tu solicitud en "Mi solicitud".
               </div>
             )}
 
@@ -275,7 +375,7 @@ export default function ServicioDetallePage() {
       {relatedServices.length > 0 && (
         <section className="space-y-6">
           <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">
-            Otros servicios de {service.category.toLowerCase()}
+            Otros servicios de {String(service.category || '').toLowerCase()}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {relatedServices.map((s) => (
