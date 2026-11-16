@@ -27,6 +27,8 @@ export default function ServicioDetallePage() {
   const [date, setDate] = useState('')
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   async function load() {
     setLoading(true)
@@ -57,6 +59,7 @@ export default function ServicioDetallePage() {
     setDate('')
     setErrors({})
     setSuccess(false)
+    setSubmitError(null)
     ;(async () => {
       setLoading(true)
       setError(null)
@@ -168,7 +171,7 @@ export default function ServicioDetallePage() {
     return Object.keys(newErrors).length === 0
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!validate()) return
 
@@ -184,20 +187,27 @@ export default function ServicioDetallePage() {
         ? newPetSpecies
         : petOption.split('|')[1] || 'Perro'
 
-    addRequest({
-      userId: currentUser.id,
-      serviceId: service.id,
-      petName,
-      species,
-      requestedDate: date,
-    })
-
-    setSuccess(true)
-    setPetOption('')
-    setNewPetName('')
-    setNewPetSpecies('Perro')
-    setDate('')
-    setTimeout(() => setSuccess(false), 5000)
+    setSubmitting(true)
+    setSubmitError(null)
+    setSuccess(false)
+    try {
+      await addRequest({
+        userId: currentUser.id,
+        serviceId: service.id,
+        petName,
+        species,
+        requestedDate: date,
+      })
+      setSuccess(true)
+      setPetOption('')
+      setNewPetName('')
+      setNewPetSpecies('Perro')
+      setDate('')
+    } catch (err) {
+      setSubmitError(err.message || 'No se pudo enviar la solicitud. Intenta nuevamente.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function handleAddRelated(serviceId) {
@@ -270,7 +280,10 @@ export default function ServicioDetallePage() {
                 onChange={(e) => {
                   setPetOption(e.target.value)
                   setErrors((prev) => ({ ...prev, pet: '' }))
+                  setSuccess(false)
+                  setSubmitError(null)
                 }}
+                disabled={submitting}
                 className={inputClass(!!errors.pet)}
               >
                 <option value="">-- Seleccione su mascota --</option>
@@ -305,7 +318,10 @@ export default function ServicioDetallePage() {
                     onChange={(e) => {
                       setNewPetName(e.target.value)
                       setErrors((prev) => ({ ...prev, newPetName: '' }))
+                      setSuccess(false)
+                      setSubmitError(null)
                     }}
+                    disabled={submitting}
                     className={inputClass(!!errors.newPetName)}
                   />
                   {errors.newPetName && (
@@ -325,6 +341,7 @@ export default function ServicioDetallePage() {
                     id="nueva-mascota-especie"
                     value={newPetSpecies}
                     onChange={(e) => setNewPetSpecies(e.target.value)}
+                    disabled={submitting}
                     className={inputClass(false)}
                   >
                     <option value="Perro">Perro</option>
@@ -351,7 +368,10 @@ export default function ServicioDetallePage() {
                 onChange={(e) => {
                   setDate(e.target.value)
                   setErrors((prev) => ({ ...prev, date: '' }))
+                  setSuccess(false)
+                  setSubmitError(null)
                 }}
+                disabled={submitting}
                 className={inputClass(!!errors.date)}
               />
               {errors.date && (
@@ -359,14 +379,23 @@ export default function ServicioDetallePage() {
               )}
             </div>
 
-            {success && (
-              <div className="p-3 text-sm text-emerald-800 rounded-lg bg-emerald-50 border border-emerald-200">
-                ✓ Solicitud enviada. Revisa tu solicitud en "Mi solicitud".
+            {submitError && (
+              <div className="p-3 text-sm text-rose-800 rounded-lg bg-rose-50 border border-rose-200">
+                {submitError}
               </div>
             )}
 
-            <Button type="submit" className="w-full py-3">
-              Solicitar este servicio
+            {success && (
+              <div className="p-3 text-sm text-emerald-800 rounded-lg bg-emerald-50 border border-emerald-200">
+                Solicitud enviada correctamente.{' '}
+                <Link to="/mi-solicitud" className="font-semibold underline underline-offset-2">
+                  Ver mis solicitudes
+                </Link>
+              </div>
+            )}
+
+            <Button type="submit" className="w-full py-3" disabled={submitting}>
+              {submitting ? 'Enviando solicitud...' : 'Solicitar este servicio'}
             </Button>
           </form>
         </div>
