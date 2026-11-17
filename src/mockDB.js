@@ -253,7 +253,7 @@ const initialUsers = [
     id: 'U001',
     run: '11.111.111-1',
     email: 'admin@veterinariasanmarcos.cl',
-    password: 'Admin1234',
+    password: '12345678',
     firstName: 'Administrador',
     lastName: 'San Marcos',
     role: 'admin',
