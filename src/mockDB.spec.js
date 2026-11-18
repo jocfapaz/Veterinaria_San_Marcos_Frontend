@@ -202,7 +202,7 @@ describe('mockDB', () => {
     })
 
     it('permite iniciar sesión con credenciales válidas', () => {
-      const user = login('admin@veterinariasanmarcos.cl', 'Admin1234')
+      const user = login('admin@veterinariasanmarcos.cl', '12345678')
 
       expect(user).toBeTruthy()
       expect(user.email).toBe('admin@veterinariasanmarcos.cl')
