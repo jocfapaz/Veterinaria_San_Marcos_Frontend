@@ -30,3 +30,5 @@ test-results
 *.pdf
 
 .env
+.env.*
+!.env.example
