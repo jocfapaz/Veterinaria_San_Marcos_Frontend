@@ -56,7 +56,8 @@ export function mapOrder(dto = {}, extra = {}) {
     shippingAddress: d.shippingAddress ?? d.direccionEnvio ?? d.direccion ?? extra.shippingAddress ?? '',
     instructions: d.instructions ?? d.instrucciones ?? d.indicaciones ?? extra.instructions ?? '',
     customer: d.customer ?? d.cliente ?? extra.customer ?? null,
-    deliveryType: d.deliveryType ?? d.tipoEntrega ?? extra.deliveryType ?? null,
+    // El backend serializa el enum como ENVIO/RETIRO; la UI trabaja en minúsculas.
+    deliveryType: String(d.deliveryType ?? d.tipoEntrega ?? extra.deliveryType ?? 'envio').toLowerCase(),
     createdAt,
   }
 }
@@ -94,7 +95,8 @@ export async function createOrder(orderData) {
   const customer = orderData.customer || {}
   const payload = {
     direccionEnvio: orderData.shippingAddress,
-    tipoEntrega: orderData.deliveryType,
+    // TipoEntrega del backend es un enum: ENVIO / RETIRO (case-sensitive).
+    tipoEntrega: String(orderData.deliveryType || 'envio').toUpperCase(),
     instrucciones: orderData.instructions || '',
     contactoNombre: customer.firstName || '',
     contactoApellido: customer.lastName || '',
