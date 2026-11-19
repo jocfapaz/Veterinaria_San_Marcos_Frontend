@@ -250,7 +250,7 @@ export default function AdminProductoForm() {
             onChange={handleChange}
             error={errors.price}
             min={0}
-            step={500}
+            step={1}
             required
           />
 

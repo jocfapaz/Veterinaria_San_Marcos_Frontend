@@ -81,8 +81,26 @@ export async function getOrderById(id) {
   return mapOrder(raw)
 }
 
+// El enum del backend está en español (PAGADA, EN_PREPARACION, ...).
+// Aceptamos tanto los valores de la UI en minúsculas como los alias antiguos
+// en inglés para que cualquier llamador envíe siempre un enum válido.
+const ORDER_STATUS_TO_BACKEND = {
+  paid: 'PAGADA',
+  pagada: 'PAGADA',
+  processing: 'EN_PREPARACION',
+  en_preparacion: 'EN_PREPARACION',
+  shipped: 'ENVIADA',
+  enviada: 'ENVIADA',
+  delivered: 'ENTREGADA',
+  entregada: 'ENTREGADA',
+  cancelled: 'CANCELADA',
+  cancelada: 'CANCELADA',
+}
+
 export async function updateOrderStatus(id, status) {
-  const data = await patch(`/orders/${id}/status`, { estado: status })
+  const key = String(status).toLowerCase()
+  const estado = ORDER_STATUS_TO_BACKEND[key] || key.toUpperCase()
+  const data = await patch(`/orders/${id}/status`, { estado })
   const raw = data?.data ?? data?.orden ?? data?.order ?? data
   return raw ? mapOrder(raw) : { id, status }
 }

@@ -248,22 +248,44 @@ describe('ordersApi', () => {
     expect(await getOrderById(19)).toBeNull()
   })
 
-  it('updateOrderStatus mapea la respuesta y usa el fallback si está vacía', async () => {
+  it('updateOrderStatus envía el enum en español y mapea la respuesta', async () => {
     respondWith({ data: { id: 20, estado: 'PAGADA' } })
     expect((await updateOrderStatus(20, 'pagada')).status).toBe('pagada')
-    expect(lastCallBody()).toEqual({ estado: 'pagada' })
+    expect(lastCallBody()).toEqual({ estado: 'PAGADA' })
 
     respondWith({ orden: { id: 21, estado: 'ENVIADA' } })
     expect((await updateOrderStatus(21, 'enviada')).id).toBe(21)
+    expect(lastCallBody()).toEqual({ estado: 'ENVIADA' })
 
     respondWith({ order: { id: 22, estado: 'ENTREGADA' } })
     expect((await updateOrderStatus(22, 'entregada')).id).toBe(22)
+    expect(lastCallBody()).toEqual({ estado: 'ENTREGADA' })
 
     respondWith({ id: 23, estado: 'CANCELADA' })
     expect((await updateOrderStatus(23, 'cancelada')).id).toBe(23)
+    expect(lastCallBody()).toEqual({ estado: 'CANCELADA' })
+  })
+
+  it('updateOrderStatus acepta alias en inglés y respuestas vacías', async () => {
+    respondWith({ data: { id: 30 } })
+    await updateOrderStatus(30, 'processing')
+    expect(lastCallBody()).toEqual({ estado: 'EN_PREPARACION' })
+
+    respondWith({ data: { id: 31 } })
+    await updateOrderStatus(31, 'shipped')
+    expect(lastCallBody()).toEqual({ estado: 'ENVIADA' })
+
+    respondWith({ data: { id: 32 } })
+    await updateOrderStatus(32, 'delivered')
+    expect(lastCallBody()).toEqual({ estado: 'ENTREGADA' })
+
+    respondWith({ data: { id: 33 } })
+    await updateOrderStatus(33, 'cancelled')
+    expect(lastCallBody()).toEqual({ estado: 'CANCELADA' })
 
     respondWith(null)
     expect(await updateOrderStatus(24, 'pendiente')).toEqual({ id: 24, status: 'pendiente' })
+    expect(lastCallBody()).toEqual({ estado: 'PENDIENTE' })
   })
 
   it('createOrder construye el payload completo del backend', async () => {

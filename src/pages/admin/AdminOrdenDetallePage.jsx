@@ -7,13 +7,34 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader'
 import LoadingScreen from '../../components/LoadingScreen'
 import StatusBadge from '../../components/admin/StatusBadge'
 
+// El backend devuelve el estado en español (PAGADA, EN_PREPARACION, ...)
+// y mapOrder lo deja en minúsculas. Usamos esos mismos valores en la UI.
 const ORDER_STATUSES = [
-  { value: 'paid', label: 'Pagada' },
-  { value: 'processing', label: 'En preparación' },
-  { value: 'shipped', label: 'Enviada' },
-  { value: 'delivered', label: 'Entregada' },
-  { value: 'cancelled', label: 'Cancelada' },
+  { value: 'pagada', label: 'Pagada' },
+  { value: 'en_preparacion', label: 'En preparación' },
+  { value: 'enviada', label: 'Enviada' },
+  { value: 'entregada', label: 'Entregada' },
+  { value: 'cancelada', label: 'Cancelada' },
 ]
+
+// OrdenService solo permite avanzar de uno en uno y cancelar antes de entregar.
+const NEXT_STATUS = {
+  pagada: 'en_preparacion',
+  en_preparacion: 'enviada',
+  enviada: 'entregada',
+}
+
+function availableStatuses(current) {
+  const next = NEXT_STATUS[current]
+  return ORDER_STATUSES.filter(
+    (s) =>
+      s.value === current ||
+      s.value === next ||
+      (s.value === 'cancelada' &&
+        current !== 'entregada' &&
+        current !== 'cancelada')
+  )
+}
 
 function formatDate(value) {
   if (!value) return '-'
@@ -176,7 +197,7 @@ export default function AdminOrdenDetallePage() {
                   disabled={saving}
                   className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
                 >
-                  {ORDER_STATUSES.map((s) => (
+                  {availableStatuses(order.status).map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>

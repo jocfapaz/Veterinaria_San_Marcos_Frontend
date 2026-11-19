@@ -68,7 +68,9 @@ function toUserPayload(data = {}) {
 
 export async function listUsers() {
   const data = await get('/users')
-  return toArray(data).map(mapUser)
+  // El backend hace soft delete (activo=false) pero sigue devolviendo esos
+  // usuarios en GET /users. No los mostramos para que "Eliminar" tenga efecto.
+  return toArray(data).map(mapUser).filter((user) => user.active !== false)
 }
 
 export async function getUserById(id) {
